@@ -135,6 +135,20 @@ The UI can therefore answer **why** an incident was raised instead of presenting
 
 ## Phase 5 — Grounded ATT&CK intelligence
 ## Phase 6 — Temporal attack reconstruction
+## Phase 7 — Grounded LLM investigator
+
+The project now has an optional LLM investigator that runs **after** deterministic incident validation and attack reconstruction.
+
+The LLM receives a sealed evidence packet containing the validated incident, reconstruction, ATT&CK enrichment and incident timeline. External telemetry is explicitly treated as untrusted data.
+
+Every factual, inferential and recommendation claim must cite actual event IDs. A deterministic validator rejects unknown or uncited evidence references.
+
+Production configuration uses `LLM_BASE_URL` and `LLM_MODEL`, with optional `LLM_API_KEY`. There is no synthetic fallback; missing provider configuration fails closed.
+
+`POST /api/investigate` exposes the investigator.
+
+See `docs/PHASE7_SPEC.md` for the security boundary and validation gate.
+
 
 Validated incidents now include a deterministic causal reconstruction layer. Candidate stage evidence is converted into an identity- and time-aware graph, feasible paths are scored, and the highest-scoring minimal attack skeleton is retained.
 

@@ -10,9 +10,10 @@ from fastapi.staticfiles import StaticFiles
 from .adapters import normalize_sysmon_event, normalize_windows_event, normalize_windows_event_xml, normalize_zeek_event
 from .behavior import build_profiles, enrich_events
 from .detector import analyze
+from .investigator import investigate
 from .reconstructor import reconstruct
 from .evaluator import run_phase2
-from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, Phase2Report, SecurityEvent
+from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, InvestigationReport, InvestigationRequest, Phase2Report, SecurityEvent
 from .normalizer import normalize_events
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -123,6 +124,35 @@ def analyze_zeek(payload: dict) -> AnalysisResponse:
         raise HTTPException(status_code=400, detail="events must not be empty")
     normalized = [normalize_zeek_event(event, stream=stream, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
+
+
+@app.post("/api/investigate", response_model=InvestigationReport)
+def investigate_incident(payload: InvestigationRequest) -> InvestigationReport:
+    if not payload.events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+
+    analysis = analyze(payload.events)
+    if not analysis.incidents:
+        raise HTTPException(
+            status_code=422,
+            detail="no validated incident is available for grounded investigation",
+        )
+
+    incident = next(
+        (
+            item
+            for item in analysis.incidents
+            if payload.incident_id is None or item.incident_id == payload.incident_id
+        ),
+        None,
+    )
+    if incident is None:
+        raise HTTPException(status_code=404, detail="incident_id not found")
+
+    try:
+        return investigate(incident, question=payload.question)
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.post("/api/reconstruct")

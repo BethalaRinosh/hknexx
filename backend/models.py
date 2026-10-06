@@ -164,3 +164,27 @@ class AttackTechnique(BaseModel):
     rationale: str
     mapping_type: Literal["stage_inference", "behavioral_inference"] = "stage_inference"
     mapping_confidence: float
+
+
+class InvestigationClaim(BaseModel):
+    claim: str
+    claim_type: Literal["fact", "inference", "uncertainty", "recommendation"]
+    evidence_event_ids: list[str] = Field(default_factory=list)
+    confidence: float
+
+
+class InvestigationReport(BaseModel):
+    incident_id: str
+    provider: str
+    model: str
+    grounded: bool
+    summary: str
+    claims: list[InvestigationClaim]
+    unanswered_questions: list[str] = Field(default_factory=list)
+    recommended_actions: list[str] = Field(default_factory=list)
+
+
+class InvestigationRequest(BaseModel):
+    events: list[SecurityEvent]
+    incident_id: str | None = None
+    question: str | None = None
