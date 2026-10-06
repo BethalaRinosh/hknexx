@@ -95,7 +95,7 @@ def _iter_json_array(path: Path) -> Iterator[dict[str, Any]]:
 
 def _iter_sysmon_xml(path: Path) -> Iterator[str]:
     text = path.read_text(encoding="utf-8", errors="replace")
-    for match in re.finditer(r"<Event\\b.*?</Event>", text, flags=re.IGNORECASE | re.DOTALL):
+    for match in re.finditer(r"<Event\b.*?</Event>", text, flags=re.IGNORECASE | re.DOTALL):
         yield match.group(0)
 
 
@@ -138,7 +138,9 @@ def _iter_path(path: Path, fmt: str) -> Iterator[dict[str, Any] | str]:
         raise PublicDatasetError(f"Unsupported dataset format: {fmt}")
 
 
-def _observed_techniques(raw: dict[str, Any]) -> list[str]:
+def _observed_techniques(raw: dict[str, Any] | str) -> list[str]:
+    if isinstance(raw, str):
+        return []
     values = []
     for key in ("mitre_technique", "technique", "techniques", "attack_technique"):
         value = raw.get(key)
