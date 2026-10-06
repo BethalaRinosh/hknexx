@@ -60,7 +60,15 @@ def _parse_bool(value: str) -> bool:
 
 def _parse_timestamp(value: str) -> datetime:
     text = value.strip().replace("Z", "+00:00")
-    return datetime.fromisoformat(text)
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError:
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S"):
+            try:
+                return datetime.strptime(value.strip(), fmt)
+            except ValueError:
+                continue
+        raise
 
 
 def _activity_kind(activity: str, resource: str) -> set[str]:
@@ -88,6 +96,18 @@ def load_cert_records(path: Path) -> list[CERTRecord]:
         required = {name.lower() for name in (reader.fieldnames or [])}
         if not required:
             raise ValueError("CERT benchmark CSV has no header")
+
+        required_alias_groups = (
+            ("case_id", "case", "caseid", "pc", "resource_id", "user"),
+            ("activity", "event", "event_type", "action", "type"),
+            ("timestamp", "time", "datetime", "date", "event_time"),
+            ("label", "class", "target", "is_malicious", "malicious", "anomaly"),
+        )
+        for group in required_alias_groups:
+            if not any(alias.lower() in required for alias in group):
+                raise ValueError(
+                    f"CERT benchmark CSV missing required semantic column group: {group}"
+                )
 
         records: list[CERTRecord] = []
         for row in reader:
