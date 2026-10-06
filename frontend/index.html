@@ -15,10 +15,23 @@
         <p class="subtitle">Correlate events. Prove every stage. Stay silent on benign activity.</p>
       </div>
       <div class="controls">
-        <button id="attackBtn" class="primary">Run Attack Demo</button>
-        <button id="cleanBtn">Run Clean Demo</button>
+        <button id="attackBtn" class="primary">Run Full Attack</button>
+        <button id="cleanBtn">Run Clean</button>
       </div>
     </header>
+
+    <section class="panel scenario-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Scenario Lab</h2>
+          <div class="muted">Intentionally test what the detector should alert on — and what it must ignore.</div>
+        </div>
+        <div class="controls">
+          <select id="scenarioSelect"></select>
+          <button id="scenarioBtn">Run Scenario</button>
+        </div>
+      </div>
+    </section>
 
     <section class="stats" id="stats"></section>
 
