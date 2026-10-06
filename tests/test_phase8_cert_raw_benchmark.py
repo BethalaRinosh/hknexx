@@ -16,7 +16,8 @@ def test_raw_cert_three_stage_chain(tmp_path):
     _write(
         tmp_path / "logon.csv",
         "user,pc,date,activity\n"
-        "U1,PC1,01/01/2026 09:00:00,Logon\n",
+        "U1,PC1,01/01/2026 09:00:00,Logon\n"
+        "BENIGN,PC2,01/01/2026 10:00:00,Logon\n",
     )
     _write(
         tmp_path / "device.csv",
@@ -32,6 +33,10 @@ def test_raw_cert_three_stage_chain(tmp_path):
 
     result = evaluate_raw_cert(tmp_path)
     assert result.malicious_scenarios == 1
+    assert result.compatible_malicious_scenarios == 1
+    assert result.compatibility_rate == 1.0
+    assert result.compatible_ordered_chain_recall == 1.0
+    assert result.benign_windows_sampled == 1
     assert result.identity_recall == 1.0
     assert result.sensitive_recall == 1.0
     assert result.exfil_recall == 1.0
