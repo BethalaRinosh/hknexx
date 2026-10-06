@@ -13,7 +13,12 @@ class SecurityEvent(BaseModel):
     user: str | None = None
     device: str | None = None
     src_ip: str | None = None
+    dst_ip: str | None = None
     application: str | None = None
+    process: str | None = None
+    pid: int | None = None
+    parent_process: str | None = None
+    session_id: str | None = None
     resource: str | None = None
     action: str | None = None
     source: str

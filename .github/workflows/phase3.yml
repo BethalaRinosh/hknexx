@@ -1,0 +1,67 @@
+name: Phase 3 Real Log Validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  phase3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run full regression suite
+        run: python -m pytest -q
+
+      - name: Verify Phase 3 adapter contract
+        run: |
+          python - <<'PY'
+          from backend.adapters import (
+              normalize_sysmon_event,
+              normalize_windows_event,
+              normalize_zeek_event,
+          )
+
+          windows_login = normalize_windows_event({
+              "System": {"EventID": 4624, "Computer": "WIN-01",
+                         "TimeCreated": {"SystemTime": "2026-10-06T19:05:00Z"}},
+              "EventData": {"TargetUserName": "alice",
+                            "TargetLogonId": "0x9ab",
+                            "IpAddress": "203.0.113.44"}
+          })
+          assert windows_login.event_type == "login"
+          assert windows_login.user == "alice"
+          assert windows_login.src_ip == "203.0.113.44"
+
+          sysmon = normalize_sysmon_event({
+              "System": {"EventID": 1, "Computer": "WIN-01"},
+              "EventData": {"UtcTime": "2026-10-06T19:10:00Z",
+                            "User": "alice",
+                            "Image": "C:\\Windows\\System32\\powershell.exe",
+                            "ProcessId": "0x1234"}
+          })
+          assert sysmon.event_type == "process_create"
+          assert sysmon.pid == 4660
+          assert sysmon.process.endswith("powershell.exe")
+
+          zeek = normalize_zeek_event({
+              "ts": 1791313800.125,
+              "uid": "C123",
+              "id.orig_h": "10.0.0.20",
+              "id.resp_h": "93.184.216.34",
+              "method": "GET",
+              "uri": "/download"
+          }, stream="http")
+          assert zeek.event_type == "http_request"
+          assert zeek.src_ip == "10.0.0.20"
+          assert zeek.dst_ip == "93.184.216.34"
+
+          print("PHASE3_ADAPTER_CONTRACT=PASS")
+          PY
