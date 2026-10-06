@@ -14,8 +14,12 @@ from .models import (
     SecurityEvent,
 )
 
-
-DEMO_WINDOW = timedelta(minutes=30)
+CHAIN_WINDOW = timedelta(minutes=30)
+REQUIRED_STAGES = (
+    "Initial Access / Identity Anomaly",
+    "Sensitive Data Access",
+    "Collection / Exfiltration",
+)
 
 
 def _entity_keys(event: SecurityEvent) -> set[str]:
@@ -33,7 +37,87 @@ def _entity_keys(event: SecurityEvent) -> set[str]:
     return keys
 
 
-def _graph(event_chain: list[SecurityEvent]) -> tuple[list[GraphNode], list[GraphEdge]]:
+def _identity_compatible(a: SecurityEvent, b: SecurityEvent) -> bool:
+    # Explicit contradictions must never be glued into one campaign.
+    if a.user and b.user and a.user != b.user:
+        return False
+    if a.device and b.device and a.device != b.device:
+        return False
+
+    shared = set(filter(None, (a.user, a.device, a.src_ip))) & set(
+        filter(None, (b.user, b.device, b.src_ip))
+    )
+    return bool(shared)
+
+
+def _event_score(event: SecurityEvent) -> float:
+    score = 0.0
+    if event.event_type == "login" and event.metadata.get("unusual_ip"):
+        score += 0.45
+    if event.metadata.get("new_device"):
+        score += 0.20
+    if event.event_type == "file_access" and event.metadata.get("sensitive"):
+        score += 0.35
+    if event.event_type == "usb_mount" and event.metadata.get("removable", True):
+        score += 0.12
+    if event.event_type == "file_copy":
+        copied_bytes = int(event.metadata.get("bytes", 0) or 0)
+        if copied_bytes >= 1_000_000_000:
+            score += 0.50
+        elif copied_bytes >= 250_000_000:
+            score += 0.20
+
+    # Severity is supporting context, not the main detector.
+    score += {"critical": 0.05, "high": 0.04, "medium": 0.02}.get(event.severity, 0.0)
+    return min(1.0, score)
+
+
+def _cluster(events: list[SecurityEvent]) -> list[list[SecurityEvent]]:
+    events = sorted(events, key=lambda e: e.timestamp)
+    clusters: list[list[SecurityEvent]] = []
+
+    for event in events:
+        placed = False
+        for cluster in clusters:
+            if event.timestamp - cluster[0].timestamp > CHAIN_WINDOW:
+                continue
+            if any(
+                _identity_compatible(event, existing)
+                for existing in cluster
+                if event.timestamp >= existing.timestamp
+            ):
+                cluster.append(event)
+                placed = True
+                break
+        if not placed:
+            clusters.append([event])
+
+    return [sorted(cluster, key=lambda e: e.timestamp) for cluster in clusters]
+
+
+def _find(cluster: list[SecurityEvent], predicate) -> SecurityEvent | None:
+    return next((e for e in cluster if predicate(e)), None)
+
+
+def _stage(
+    name: str,
+    technique: str | None,
+    confidence: float,
+    evidence: list[EvidenceItem],
+    entities: set[str],
+    reason: str,
+) -> AttackStage:
+    return AttackStage(
+        stage=name,
+        technique=technique,
+        confidence=round(confidence, 2),
+        evidence=evidence,
+        entities=sorted(entities),
+        reason=reason,
+    )
+
+
+def _build_graph(event_chain: list[SecurityEvent]) -> tuple[list[GraphNode], list[GraphEdge]]:
     nodes: dict[str, GraphNode] = {}
     edges: dict[tuple[str, str, str], GraphEdge] = {}
 
@@ -46,22 +130,25 @@ def _graph(event_chain: list[SecurityEvent]) -> tuple[list[GraphNode], list[Grap
     }
 
     for event in event_chain:
-        ordered = [
+        parts = [
             ("user", f"user:{event.user}") if event.user else None,
             ("device", f"device:{event.device}") if event.device else None,
             ("ip", f"ip:{event.src_ip}") if event.src_ip else None,
             ("app", f"app:{event.application}") if event.application else None,
             ("resource", f"resource:{event.resource}") if event.resource else None,
         ]
-        chain = [item for item in ordered if item]
+        chain = [p for p in parts if p]
+
         for node_type, node_id in chain:
-            raw = node_id.split(":", 1)[1]
-            nodes[node_id] = GraphNode(id=node_id, label=raw, type=labels[node_type])
+            nodes[node_id] = GraphNode(
+                id=node_id,
+                label=node_id.split(":", 1)[1],
+                type=labels[node_type],
+            )
 
         for (src_type, src), (dst_type, dst) in zip(chain, chain[1:]):
             relation = event.action or event.event_type.replace("_", " ")
-            key = (src, dst, relation)
-            edges[key] = GraphEdge(
+            edges[(src, dst, relation)] = GraphEdge(
                 source=src,
                 target=dst,
                 relation=relation,
@@ -71,190 +158,207 @@ def _graph(event_chain: list[SecurityEvent]) -> tuple[list[GraphNode], list[Grap
     return list(nodes.values()), list(edges.values())
 
 
-def _event_score(event: SecurityEvent) -> float:
-    score = 0.0
-    unusual_ip = event.metadata.get("unusual_ip", False)
-    new_device = event.metadata.get("new_device", False)
-    sensitive = event.metadata.get("sensitive", False)
+def _entity_consistency(events: list[SecurityEvent]) -> float:
+    if len(events) < 2:
+        return 0.0
 
-    if event.event_type == "login" and unusual_ip:
-        score += 0.25
-    if new_device:
-        score += 0.20
-    if event.event_type == "file_access" and sensitive:
-        score += 0.20
-    if event.event_type == "usb_mount":
-        score += 0.20
-    if event.event_type == "file_copy" and event.metadata.get("bytes", 0) >= 1_000_000_000:
-        score += 0.30
-
-    severity_bonus = {"critical": 0.20, "high": 0.15, "medium": 0.08}.get(event.severity, 0.0)
-    return min(1.0, score + severity_bonus)
-
-
-def _same_campaign(events: list[SecurityEvent]) -> list[SecurityEvent]:
-    if not events:
-        return []
-
-    events = sorted(events, key=lambda e: e.timestamp)
-    anchor = events[0]
-
-    return [
-        e for e in events
-        if e.timestamp - anchor.timestamp <= DEMO_WINDOW
-        and (
-            (anchor.user and e.user == anchor.user)
-            or (anchor.device and e.device == anchor.device)
-            or (anchor.src_ip and e.src_ip == anchor.src_ip)
-        )
-    ]
-
-
-def _stage(events: list[SecurityEvent], event_type: str) -> SecurityEvent | None:
-    return next((e for e in events if e.event_type == event_type), None)
+    adjacent = []
+    for a, b in zip(events, events[1:]):
+        if not _identity_compatible(a, b):
+            adjacent.append(0.0)
+            continue
+        shared = len(set(filter(None, (a.user, a.device, a.src_ip))) & set(
+            filter(None, (b.user, b.device, b.src_ip))
+        ))
+        adjacent.append(min(1.0, shared / 2))
+    return round(sum(adjacent) / len(adjacent), 2)
 
 
 def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
     ordered = sorted(events, key=lambda e: e.timestamp)
+    scored = [(event, _event_score(event)) for event in ordered]
+    suspicious = [event for event, score in scored if score >= 0.10]
 
-    suspicious = [e for e in ordered if _event_score(e) > 0]
     if not suspicious:
         return AnalysisResponse(
             total_events=len(ordered),
             suspicious_events=0,
+            watchlist_candidates=0,
+            suppressed_events=len(ordered),
             correlated_incidents=0,
             incidents=[],
             suppressed=True,
         )
 
-    grouped: dict[str, list[SecurityEvent]] = defaultdict(list)
-    for event in suspicious:
-        key = event.user or event.device or event.src_ip or "unknown"
-        grouped[key].append(event)
-
+    clusters = _cluster(suspicious)
     incidents: list[Incident] = []
+    watchlist = 0
+    evidence_events = set()
 
-    for key, group in grouped.items():
-        chain = _same_campaign(group)
-
-        login = next(
-            (e for e in chain if e.event_type == "login" and e.metadata.get("unusual_ip", False)),
-            None,
+    for cluster in clusters:
+        login = _find(
+            cluster,
+            lambda e: e.event_type == "login" and bool(e.metadata.get("unusual_ip")),
         )
-        file_access = next(
-            (e for e in chain if e.event_type == "file_access" and e.metadata.get("sensitive", False)),
-            None,
+        new_device = _find(cluster, lambda e: bool(e.metadata.get("new_device")))
+        sensitive = _find(
+            cluster,
+            lambda e: e.event_type == "file_access" and bool(e.metadata.get("sensitive")),
         )
-        usb = _stage(chain, "usb_mount")
-        copy = next(
-            (
-                e for e in chain
-                if e.event_type == "file_copy"
-                and e.metadata.get("bytes", 0) >= 1_000_000_000
-            ),
-            None,
+        usb = _find(cluster, lambda e: e.event_type == "usb_mount")
+        copy = _find(
+            cluster,
+            lambda e: e.event_type == "file_copy"
+            and int(e.metadata.get("bytes", 0) or 0) >= 1_000_000_000,
         )
 
-        evidence = [e for e in (login, file_access, usb, copy) if e is not None]
-        if len(evidence) < 3:
-            continue
+        stage_events: dict[str, list[SecurityEvent]] = {
+            REQUIRED_STAGES[0]: [e for e in (login, new_device) if e],
+            REQUIRED_STAGES[1]: [sensitive] if sensitive else [],
+            REQUIRED_STAGES[2]: [e for e in (usb, copy) if e],
+        }
 
         stages: list[AttackStage] = []
 
-        if login:
+        if stage_events[REQUIRED_STAGES[0]]:
+            ev = stage_events[REQUIRED_STAGES[0]]
             stages.append(
-                AttackStage(
-                    stage="Initial Access / Credential Misuse",
-                    technique="T1078",
-                    confidence=0.86,
-                    evidence=[
+                _stage(
+                    REQUIRED_STAGES[0],
+                    "T1078",
+                    0.88 if login and new_device else 0.76,
+                    [
                         EvidenceItem(
-                            event_id=login.event_id,
-                            reason="Unusual authentication from a previously unseen IP.",
+                            event_id=e.event_id,
+                            reason=(
+                                "Authentication from an unusual IP."
+                                if e.event_type == "login"
+                                else "Previously unseen device associated with the session."
+                            ),
                         )
+                        for e in ev
                     ],
-                    entities=sorted(_entity_keys(login)),
-                    reason="The authentication differs from the user's observed baseline.",
+                    set().union(*(_entity_keys(e) for e in ev)),
+                    "Authentication and device identity differ from the user's expected baseline.",
                 )
             )
 
-        if file_access:
+        if sensitive:
             stages.append(
-                AttackStage(
-                    stage="Sensitive Data Access",
-                    technique="T1005",
-                    confidence=0.90,
-                    evidence=[
+                _stage(
+                    REQUIRED_STAGES[1],
+                    "T1005",
+                    0.90,
+                    [
                         EvidenceItem(
-                            event_id=file_access.event_id,
-                            reason="Sensitive resource accessed after anomalous authentication.",
+                            event_id=sensitive.event_id,
+                            reason="Sensitive resource accessed after the identity anomaly.",
                         )
                     ],
-                    entities=sorted(_entity_keys(file_access)),
-                    reason="The same user/device reached a marked sensitive resource.",
+                    _entity_keys(sensitive),
+                    "A sensitive resource was accessed by the same correlated identity/device.",
                 )
             )
 
-        if usb:
+        if stage_events[REQUIRED_STAGES[2]]:
+            exfil_events = stage_events[REQUIRED_STAGES[2]]
+            has_copy = copy is not None
             stages.append(
-                AttackStage(
-                    stage="Removable Media Access",
-                    technique="T1025",
-                    confidence=0.91,
-                    evidence=[
+                _stage(
+                    REQUIRED_STAGES[2],
+                    "T1025" if has_copy else None,
+                    0.96 if has_copy and usb else (0.82 if has_copy else 0.60),
+                    [
                         EvidenceItem(
-                            event_id=usb.event_id,
-                            reason="Removable media was mounted during the suspicious session.",
+                            event_id=e.event_id,
+                            reason=(
+                                "Removable media was mounted during the correlated session."
+                                if e.event_type == "usb_mount"
+                                else "Large-volume transfer occurred during the correlated session."
+                            ),
                         )
+                        for e in exfil_events
                     ],
-                    entities=sorted(_entity_keys(usb)),
-                    reason="A removable device appeared within the correlated attack window.",
+                    set().union(*(_entity_keys(e) for e in exfil_events)),
+                    "Removable-media presence and/or large-volume transfer provides collection/exfiltration evidence.",
                 )
             )
 
-        if copy:
-            stages.append(
-                AttackStage(
-                    stage="Collection / Exfiltration",
-                    technique="T1025",
-                    confidence=0.96,
-                    evidence=[
-                        EvidenceItem(
-                            event_id=copy.event_id,
-                            reason="Large-volume file transfer to removable media.",
-                        )
-                    ],
-                    entities=sorted(_entity_keys(copy)),
-                    reason="The transfer volume and timing strongly support data exfiltration.",
-                )
-            )
+        found = {stage.stage for stage in stages}
+        missing = [name for name in REQUIRED_STAGES if name not in found]
 
-        chain_completeness = len(stages) / 4
-        corroboration = min(1.0, len(evidence) / 4)
-        confidence = round(min(0.99, 0.45 + 0.35 * corroboration + 0.20 * chain_completeness), 2)
-        risk = min(100, int(round(confidence * 100)))
+        if len(stages) < 3:
+            # A weak cluster is useful for analyst review but must not become an incident.
+            if len(stages) >= 2:
+                watchlist += 1
+            continue
+
+        chain = sorted(
+            {
+                event.event_id: event
+                for events_for_stage in stage_events.values()
+                for event in events_for_stage
+            }.values(),
+            key=lambda e: e.timestamp,
+        )
+
+        # Stages must appear in the expected order.
+        first_ids = [
+            min((e.timestamp for e in stage_events[name]), default=None)
+            for name in REQUIRED_STAGES
+        ]
+        temporal_ok = all(
+            t is not None for t in first_ids
+        ) and first_ids == sorted(first_ids)
+        temporal_score = 1.0 if temporal_ok else 0.35
+
+        entity_score = _entity_consistency(chain)
+        chain_completeness = round(len(stages) / len(REQUIRED_STAGES), 2)
+        corroboration = min(1.0, len(set(e.event_id for e in chain)) / 5)
+
+        # A complete, correctly ordered chain with consistent entities scores highest.
+        confidence = round(
+            min(
+                0.99,
+                0.35 * chain_completeness
+                + 0.25 * corroboration
+                + 0.20 * temporal_score
+                + 0.20 * entity_score,
+            ),
+            2,
+        )
+
+        if not temporal_ok or entity_score < 0.60 or confidence < 0.78:
+            watchlist += 1
+            continue
+
+        for event in chain:
+            evidence_events.add(event.event_id)
 
         all_entities = sorted(set().union(*(_entity_keys(e) for e in chain)))
-        graph_nodes, graph_edges = _graph(chain)
-        first_seen = chain[0].timestamp
-        last_seen = chain[-1].timestamp
+        graph_nodes, graph_edges = _build_graph(chain)
 
         incidents.append(
             Incident(
-                incident_id=f"INC-{key.upper()}-001",
+                incident_id=f"INC-{key_for_incident(chain)}",
                 title="Suspected multi-stage data exfiltration",
                 severity="critical" if confidence >= 0.90 else "high",
                 confidence=confidence,
-                risk_score=risk,
+                risk_score=min(100, int(round(confidence * 100))),
                 status="validated",
-                first_seen=first_seen,
-                last_seen=last_seen,
+                first_seen=chain[0].timestamp,
+                last_seen=chain[-1].timestamp,
                 entities=all_entities,
                 timeline=chain,
                 stages=stages,
+                chain_completeness=chain_completeness,
+                corroboration_score=round(corroboration, 2),
+                temporal_score=round(temporal_score, 2),
+                entity_consistency_score=round(entity_score, 2),
+                missing_stages=missing,
                 graph_nodes=graph_nodes,
                 graph_edges=graph_edges,
-                evidence_count=len(evidence),
+                evidence_count=len(chain),
                 recommended_actions=[
                     "Disable or step-up authenticate the affected account.",
                     "Isolate the correlated device from the network.",
@@ -264,10 +368,20 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             )
         )
 
+    suppressed_events = max(0, len(suspicious) - len(evidence_events))
     return AnalysisResponse(
         total_events=len(ordered),
         suspicious_events=len(suspicious),
+        watchlist_candidates=watchlist,
+        suppressed_events=suppressed_events,
         correlated_incidents=len(incidents),
         incidents=incidents,
         suppressed=len(incidents) == 0,
     )
+
+
+def key_for_incident(chain: list[SecurityEvent]) -> str:
+    user = next((e.user for e in chain if e.user), None)
+    device = next((e.device for e in chain if e.device), None)
+    base = (user or device or "unknown").upper().replace(" ", "_")
+    return f"{base}-001"
