@@ -66,12 +66,12 @@ jobs:
 
           test -s external/cert_download/answers_manifest.txt
 
-          tar -xjf external/cert_download/answers.tar.bz2             --wildcards             --no-anchored             'insiders.csv'             -C external/cert_raw
+          rm -f external/cert_raw/insiders.csv
+          rm -rf external/cert_raw/answers
+          tar -xjf external/cert_download/answers.tar.bz2             -C external/cert_raw             --strip-components=1             answers/insiders.csv
 
-          found="$(find external/cert_raw -type f -name insiders.csv | head -n 1)"
-          test -n "$found"
-          cp "$found" external/cert_raw/insiders.csv
           test -s external/cert_raw/insiders.csv
+          echo "CERT answers rows: $(($(wc -l < external/cert_raw/insiders.csv) - 1))"
 
       - name: Verify raw CERT layout
         run: python scripts/verify_cert_raw_layout.py --data-dir external/cert_raw
