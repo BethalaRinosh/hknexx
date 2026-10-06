@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
+external/cert_raw/
+external/cert/
+external/attack_data/

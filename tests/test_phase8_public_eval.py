@@ -63,3 +63,18 @@ def test_public_dataset_evaluator_normalizes_a_local_public_style_stream(tmp_pat
     assert result.parse_errors == 0
     assert result.normalization_errors == 0
     assert result.observed_techniques == ['T1222.001']
+
+def test_public_sysmon_xml_stream_normalizes_existing_xml_adapter(tmp_path, monkeypatch):
+    path = tmp_path / "windows-sysmon.log"
+    xml = """<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><System><Provider Name="Microsoft-Windows-Sysmon"/><EventID>1</EventID><TimeCreated SystemTime="2026-10-06T09:00:00.000Z"/><Computer>WS-01</Computer></System><EventData><Data Name="UtcTime">2026-10-06 09:00:00.000</Data><Data Name="Image">C:\\Windows\\System32\\cmd.exe</Data><Data Name="User">alice</Data><Data Name="ProcessId">1234</Data><Data Name="ParentImage">C:\\Windows\\explorer.exe</Data></EventData></Event>"""
+    path.write_text(xml + "\n" + xml.replace("<EventID>1</EventID>", "<EventID>3</EventID>"), encoding="utf-8")
+    monkeypatch.setenv("IMW_SPLUNK_T1070_SYSMON_PATH", str(path))
+    spec = next(
+        item for item in load_manifest(ROOT / "backend" / "data" / "public_dataset_manifest.json")
+        if item.dataset_id == "SPLUNK_ATTACK_DATA_T1070_SYSMON"
+    )
+    result = evaluate_public_dataset(spec)
+    assert result.status == "validated"
+    assert result.total_records == 2
+    assert result.normalized_events == 2
+    assert result.normalization_errors == 0

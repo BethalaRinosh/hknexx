@@ -6,6 +6,9 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
+import re
+
+from .adapters import normalize_windows_event_xml
 from zipfile import ZipFile
 
 from .normalizer import normalize_events
@@ -90,7 +93,13 @@ def _iter_json_array(path: Path) -> Iterator[dict[str, Any]]:
             yield item
 
 
-def _iter_path(path: Path, fmt: str) -> Iterator[dict[str, Any]]:
+def _iter_sysmon_xml(path: Path) -> Iterator[str]:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    for match in re.finditer(r"<Event\b.*?</Event>", text, flags=re.IGNORECASE | re.DOTALL):
+        yield match.group(0)
+
+
+def _iter_path(path: Path, fmt: str) -> Iterator[dict[str, Any] | str]:
     if path.suffix.lower() == ".zip":
         with ZipFile(path) as archive:
             members = [
@@ -116,6 +125,9 @@ def _iter_path(path: Path, fmt: str) -> Iterator[dict[str, Any]]:
                         yield value
             return
 
+    if fmt == "sysmon_xml":
+        yield from _iter_sysmon_xml(path)
+        return
     if fmt == "jsonl":
         yield from _iter_json_lines(_iter_text_file(path))
     elif fmt == "csv":
@@ -126,7 +138,9 @@ def _iter_path(path: Path, fmt: str) -> Iterator[dict[str, Any]]:
         raise PublicDatasetError(f"Unsupported dataset format: {fmt}")
 
 
-def _observed_techniques(raw: dict[str, Any]) -> list[str]:
+def _observed_techniques(raw: dict[str, Any] | str) -> list[str]:
+    if isinstance(raw, str):
+        return []
     values = []
     for key in ("mitre_technique", "technique", "techniques", "attack_technique"):
         value = raw.get(key)
@@ -193,7 +207,10 @@ def evaluate_public_dataset(spec: PublicDatasetSpec) -> PublicEvaluationResult:
             total += 1
             techniques.update(_observed_techniques(raw))
             try:
-                normalized.extend(normalize_events([raw]))
+                if isinstance(raw, str):
+                    normalized.append(normalize_windows_event_xml(raw, index=total - 1))
+                else:
+                    normalized.extend(normalize_events([raw]))
             except Exception:
                 normalization_errors += 1
     except Exception:

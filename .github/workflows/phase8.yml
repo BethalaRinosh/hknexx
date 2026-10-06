@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, phase8-public-validation]
+    branches: [main, phase8-public-validation, phase8-apt29-ground-truth]
 
 jobs:
   phase8:
@@ -17,7 +17,72 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Fetch pinned public Sysmon corpus
+        uses: actions/checkout@v4
+        with:
+          repository: splunk/attack_data
+          path: external/attack_data
+          fetch-depth: 1
+          lfs: true
+          sparse-checkout: |
+            datasets/attack_techniques/T1070/atomic_red_team/windows-sysmon.log
+          sparse-checkout-cone-mode: false
+      - name: Verify public corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s external/attack_data/datasets/attack_techniques/T1070/atomic_red_team/windows-sysmon.log
+
+
+
+      - name: Download public CERT labeled event sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p external/cert
+          curl -fsSL --retry 4 --retry-delay 2             "https://zenodo.org/records/19135764/files/cert_preprocessed_ml_comparison.csv?download=1"             -o external/cert/cert_preprocessed_ml_comparison.csv
+          test -s external/cert/cert_preprocessed_ml_comparison.csv
+          echo "Downloaded bytes: $(wc -c < external/cert/cert_preprocessed_ml_comparison.csv)"
+          echo "CERT schema preview:"
+          head -n 3 external/cert/cert_preprocessed_ml_comparison.csv
+
+      - name: Run CERT public benchmark
+        run: |
+          python -m pytest -q tests/test_phase8_cert_benchmark.py
+          python - <<'PY'
+          from pathlib import Path
+          from backend.cert_benchmark import evaluate_cert
+
+          path = Path("external/cert/cert_preprocessed_ml_comparison.csv")
+          result = evaluate_cert(path)
+          print(result)
+          assert result.status == "validated"
+          assert result.total_events >= 4000
+          assert result.malicious_cases > 0
+          assert result.benign_cases > 0
+          assert 0.15 <= result.malicious_cases / result.total_cases <= 0.60
+          PY
+
       - name: Run full regression suite
         run: python -m pytest -q
+
       - name: Run Phase 8 evaluator gate
-        run: python -m pytest -q tests/test_phase8_public_eval.py
+        env:
+          IMW_SPLUNK_T1070_SYSMON_PATH: external/attack_data/datasets/attack_techniques/T1070/atomic_red_team/windows-sysmon.log
+        run: |
+          python -m pytest -q tests/test_phase8_public_eval.py
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from backend.public_eval import evaluate_public_dataset, load_manifest
+
+          manifest = load_manifest(Path("backend/data/public_dataset_manifest.json"))
+          spec = next(x for x in manifest if x.dataset_id == "SPLUNK_ATTACK_DATA_T1070_SYSMON")
+          result = evaluate_public_dataset(spec)
+          print(result)
+          assert result.available
+          assert result.status == "validated"
+          assert result.total_records > 0
+          assert result.normalized_events > 0
+          assert result.normalization_errors == 0
+          PY

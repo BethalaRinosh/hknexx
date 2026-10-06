@@ -1,0 +1,14 @@
+{
+  "dataset_id": "CERT_R4_2_ZENODO_PREPROCESSED",
+  "name": "CERT Insider Threat Test Dataset r4.2 — labeled preprocessed event sample",
+  "source_url": "https://zenodo.org/records/19135764",
+  "download_url": "https://zenodo.org/records/19135764/files/cert_preprocessed_ml_comparison.csv?download=1",
+  "derived_from": "https://doi.org/10.1184/R1/12841247.v1",
+  "expected_events": 4615,
+  "class_distribution": {
+    "normal": 0.70,
+    "anomalous": 0.30
+  },
+  "evaluation_mode": "event_trace_compatibility",
+  "note": "This is a public derived benchmark, not the raw CERT CSV corpus. It is used to validate the three-stage event-trace contract without claiming raw-source detector recall."
+}
