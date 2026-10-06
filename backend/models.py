@@ -35,6 +35,19 @@ class AttackStage(BaseModel):
     reason: str
 
 
+class GraphNode(BaseModel):
+    id: str
+    label: str
+    type: str
+
+
+class GraphEdge(BaseModel):
+    source: str
+    target: str
+    relation: str
+    event_id: str
+
+
 class Incident(BaseModel):
     incident_id: str
     title: str
@@ -47,6 +60,8 @@ class Incident(BaseModel):
     entities: list[str]
     timeline: list[SecurityEvent]
     stages: list[AttackStage]
+    graph_nodes: list[GraphNode]
+    graph_edges: list[GraphEdge]
     evidence_count: int
     recommended_actions: list[str]
 
