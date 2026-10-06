@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -54,12 +54,17 @@ class Incident(BaseModel):
     severity: str
     confidence: float
     risk_score: int
-    status: str
+    status: Literal["validated"] = "validated"
     first_seen: datetime
     last_seen: datetime
     entities: list[str]
     timeline: list[SecurityEvent]
     stages: list[AttackStage]
+    chain_completeness: float
+    corroboration_score: float
+    temporal_score: float
+    entity_consistency_score: float
+    missing_stages: list[str]
     graph_nodes: list[GraphNode]
     graph_edges: list[GraphEdge]
     evidence_count: int
@@ -69,6 +74,8 @@ class Incident(BaseModel):
 class AnalysisResponse(BaseModel):
     total_events: int
     suspicious_events: int
+    watchlist_candidates: int
+    suppressed_events: int
     correlated_incidents: int
     incidents: list[Incident]
     suppressed: bool
