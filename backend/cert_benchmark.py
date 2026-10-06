@@ -51,7 +51,7 @@ def _expand_hybrid_row(row: dict[str, str]) -> dict[str, str]:
         if ";" not in key:
             continue
         left, right = [part.strip() for part in key.split(";", 1)]
-        values = value.split(";", 1)
+        values = (value or "").split(";", 1)
         expanded.pop(key, None)
         expanded[left] = values[0].strip()
         if right:
