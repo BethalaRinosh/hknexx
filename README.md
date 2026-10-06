@@ -133,6 +133,19 @@ Every attack stage contains:
 
 The UI can therefore answer **why** an incident was raised instead of presenting a black-box alert.
 
+## Phase 5 — Grounded ATT&CK intelligence
+
+Validated incidents are now enriched with a pinned **MITRE ATT&CK Enterprise v19.2** catalog. Each mapping includes the technique/sub-technique, tactic, ATT&CK version, Detection Strategy, selected analytics, evidence event IDs, rationale and mapping confidence.
+
+The current demo maps:
+- T1078 — Valid Accounts
+- T1005 — Data from Local System
+- T1052.001 — Exfiltration over USB
+
+ATT&CK remains enrichment only. It cannot create or validate an incident without the evidence-first chain.
+
+See `docs/PHASE5_SPEC.md` and `backend/data/attack_intelligence.json`.
+
 ## Threat intelligence enrichment
 
 MITRE ATT&CK technique IDs are attached as enrichment after behavioral detection. The detector is not dependent on ATT&CK rules.
