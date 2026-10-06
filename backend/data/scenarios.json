@@ -472,5 +472,257 @@
         "removable": true
       }
     }
+  ],
+  "partial_attack": [
+    {
+      "event_id": "PARTIAL-001",
+      "timestamp": "2026-10-06T17:00:00Z",
+      "event_type": "login",
+      "user": "jane",
+      "device": "DEV-30",
+      "src_ip": "185.88.20.2",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "PARTIAL-002",
+      "timestamp": "2026-10-06T17:03:00Z",
+      "event_type": "device_enroll",
+      "user": "jane",
+      "device": "DEV-30",
+      "src_ip": "185.88.20.2",
+      "application": "EndpointManager",
+      "source": "endpoint",
+      "severity": "medium",
+      "metadata": {
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "PARTIAL-003",
+      "timestamp": "2026-10-06T17:06:00Z",
+      "event_type": "file_access",
+      "user": "jane",
+      "device": "DEV-30",
+      "src_ip": "185.88.20.2",
+      "application": "FileServer",
+      "resource": "/finance/report.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true
+      }
+    }
+  ],
+  "authorized_transfer": [
+    {
+      "event_id": "AUTH-001",
+      "timestamp": "2026-10-06T18:00:00Z",
+      "event_type": "login",
+      "user": "admin",
+      "device": "DEV-40",
+      "src_ip": "10.20.0.40",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "info",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true,
+        "authorized_activity": true
+      }
+    },
+    {
+      "event_id": "AUTH-002",
+      "timestamp": "2026-10-06T18:02:00Z",
+      "event_type": "device_enroll",
+      "user": "admin",
+      "device": "DEV-40",
+      "src_ip": "10.20.0.40",
+      "application": "EndpointManager",
+      "source": "endpoint",
+      "severity": "medium",
+      "metadata": {
+        "new_device": true,
+        "authorized_activity": true
+      }
+    },
+    {
+      "event_id": "AUTH-003",
+      "timestamp": "2026-10-06T18:05:00Z",
+      "event_type": "file_access",
+      "user": "admin",
+      "device": "DEV-40",
+      "src_ip": "10.20.0.40",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true,
+        "authorized_activity": true
+      }
+    },
+    {
+      "event_id": "AUTH-004",
+      "timestamp": "2026-10-06T18:07:00Z",
+      "event_type": "usb_mount",
+      "user": "admin",
+      "device": "DEV-40",
+      "src_ip": "10.20.0.40",
+      "application": "EndpointManager",
+      "resource": "USB-ADMIN-01",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "medium",
+      "metadata": {
+        "removable": true,
+        "sanctioned_usb": true,
+        "authorized_activity": true
+      }
+    },
+    {
+      "event_id": "AUTH-005",
+      "timestamp": "2026-10-06T18:08:00Z",
+      "event_type": "file_copy",
+      "user": "admin",
+      "device": "DEV-40",
+      "src_ip": "10.20.0.40",
+      "application": "FileExplorer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "copy_to_usb",
+      "source": "endpoint",
+      "severity": "high",
+      "metadata": {
+        "bytes": 2400000000,
+        "destination": "USB-ADMIN-01",
+        "approved_transfer": true,
+        "sanctioned_usb": true
+      }
+    }
+  ],
+  "large_backup_with_sensitive_access": [
+    {
+      "event_id": "BKP-001",
+      "timestamp": "2026-10-06T19:00:00Z",
+      "event_type": "login",
+      "user": "backupsvc",
+      "device": "DEV-50",
+      "src_ip": "10.0.0.50",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "info",
+      "metadata": {
+        "unusual_ip": false,
+        "new_device": false
+      }
+    },
+    {
+      "event_id": "BKP-002",
+      "timestamp": "2026-10-06T19:04:00Z",
+      "event_type": "file_access",
+      "user": "backupsvc",
+      "device": "DEV-50",
+      "src_ip": "10.0.0.50",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true,
+        "authorized_activity": true
+      }
+    },
+    {
+      "event_id": "BKP-003",
+      "timestamp": "2026-10-06T19:06:00Z",
+      "event_type": "file_copy",
+      "user": "backupsvc",
+      "device": "DEV-50",
+      "src_ip": "10.0.0.50",
+      "application": "BackupAgent",
+      "resource": "/finance/",
+      "action": "backup",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 8000000000,
+        "destination": "backup-server",
+        "authorized_activity": true
+      }
+    }
+  ],
+  "shared_ip_collision": [
+    {
+      "event_id": "COLL-001",
+      "timestamp": "2026-10-06T20:00:00Z",
+      "event_type": "login",
+      "user": "sam",
+      "device": "DEV-60",
+      "src_ip": "203.0.113.10",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "COLL-002",
+      "timestamp": "2026-10-06T20:04:00Z",
+      "event_type": "file_access",
+      "user": "lee",
+      "device": "DEV-61",
+      "src_ip": "203.0.113.10",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true
+      }
+    },
+    {
+      "event_id": "COLL-003",
+      "timestamp": "2026-10-06T20:07:00Z",
+      "event_type": "usb_mount",
+      "user": "lee",
+      "device": "DEV-61",
+      "src_ip": "203.0.113.10",
+      "application": "EndpointManager",
+      "resource": "USB-99",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "high",
+      "metadata": {
+        "removable": true
+      }
+    },
+    {
+      "event_id": "COLL-004",
+      "timestamp": "2026-10-06T20:08:00Z",
+      "event_type": "file_copy",
+      "user": "lee",
+      "device": "DEV-61",
+      "src_ip": "203.0.113.10",
+      "application": "FileExplorer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "copy_to_usb",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 2400000000,
+        "destination": "USB-99"
+      }
+    }
   ]
 }
