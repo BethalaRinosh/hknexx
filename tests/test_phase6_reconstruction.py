@@ -26,8 +26,8 @@ def test_full_attack_reconstructs_one_coherent_path():
         STAGE_EXFIL,
     }
     assert len(result.edges) == 2
-    assert "ATTACK-005" in result.decoy_event_ids
     assert "ATTACK-004" in result.decoy_event_ids
+    assert "ATTACK-005" in result.selected_event_ids
 
 
 def test_reconstruction_chooses_best_identity_candidate_and_keeps_decoys():
