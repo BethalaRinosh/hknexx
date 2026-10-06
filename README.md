@@ -1,0 +1,166 @@
+# Evidence-First Cyber Threat Intelligence
+
+HNX26PSI03 — AI-Powered Cyber Threat Intelligence
+
+A lightweight, explainable attack-reconstruction engine that correlates security events across users, devices, IPs, applications, files and removable media.
+
+## Core idea
+
+The system does **not** raise an incident because one event looks unusual.
+
+It first:
+
+1. normalizes heterogeneous security events;
+2. resolves entities;
+3. scores individual behavioral anomalies;
+4. builds temporal relationships;
+5. identifies a multi-stage attack chain;
+6. verifies evidence for every stage;
+7. calculates incident confidence;
+8. stays silent when the evidence is insufficient;
+9. produces a human-readable incident story and recommended response.
+
+## Demo attack
+
+Compromised account → unusual login → new device → sensitive file access → USB mount → large data copy.
+
+## Architecture
+
+```
+Security Logs
+    ↓
+Event Normalization
+    ↓
+Entity Resolution
+    ↓
+Behavior Signals
+    ↓
+Temporal / Entity Correlation
+    ↓
+Attack-Stage Reasoner
+    ↓
+Evidence Coverage
+    ↓
+Campaign Confidence
+    ↓
+Incident / Silent
+    ↓
+Timeline + Evidence + ATT&CK + Response
+```
+
+## Project structure
+
+```
+backend/
+  main.py              FastAPI API + static dashboard serving
+  models.py            Pydantic event/result models
+  detector.py          Detection, correlation and evidence engine
+  data/
+    attack_logs.json   Controlled multi-stage attack
+    clean_logs.json    Benign baseline
+frontend/
+  index.html
+  app.js
+  style.css
+requirements.txt
+```
+
+## Run locally
+
+Python 3.10+ is recommended.
+
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux/macOS
+source .venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn backend.main:app --reload
+```
+
+Open http://127.0.0.1:8000
+
+API:
+- GET /health
+- GET /api/demo/attack
+- GET /api/demo/clean
+- POST /api/analyze
+- GET /api/incidents
+
+## Current detection philosophy
+
+### Event score
+How unusual is the individual event?
+
+### Campaign score
+How strongly does the event participate in a coherent attack chain?
+
+An unusual event alone is not an incident.
+
+The MVP requires multiple related events with:
+- consistent user/device/entity linkage;
+- valid temporal order;
+- sufficient attack-stage coverage;
+- evidence references for every inferred stage.
+
+## Evidence-first output
+
+Every attack stage contains:
+- stage name
+- confidence
+- supporting event IDs
+- involved entities
+- reason
+
+The UI can therefore answer **why** an incident was raised instead of presenting a black-box alert.
+
+## Threat intelligence enrichment
+
+MITRE ATT&CK technique IDs are attached as enrichment after behavioral detection. The detector is not dependent on ATT&CK rules.
+
+Planned mappings for the demo:
+- T1078 — Valid Accounts
+- T1083 — File and Directory Discovery
+- T1005 — Data from Local System
+- T1025 — Data from Removable Media
+
+## Data
+
+The initial demo data is synthetic and intentionally small so the complete chain can be reproduced during a hackathon demonstration.
+
+Research validation can later use public provenance/IDS datasets such as NODLINK/PIDSMaker datasets without changing the normalized event interface.
+
+## MVP vs stretch
+
+### MVP
+- heterogeneous event normalization
+- temporal correlation
+- user/device/IP/application linking
+- multi-stage attack reconstruction
+- evidence coverage
+- risk/confidence
+- clean-log suppression
+- dashboard
+
+### Stretch
+- Isolation Forest / lightweight ML anomaly model
+- Sigma rule ingestion
+- OCSF-native adapters
+- public provenance dataset evaluation
+- ATT&CK navigator export
+- LLM incident summarization grounded strictly in event IDs
+- real-time streaming ingestion
+
+## Resource declaration
+
+The project is designed to use:
+- Python
+- FastAPI
+- Pydantic
+- Uvicorn
+- synthetic security logs for the initial demo
+- MITRE ATT&CK identifiers as threat-intelligence enrichment
+
+No proprietary evaluation data is used.
