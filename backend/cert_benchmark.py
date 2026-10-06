@@ -45,6 +45,20 @@ FILE_STAGE = "Sensitive Data Access"
 EXFIL_STAGE = "Collection / Exfiltration"
 
 
+def _expand_hybrid_row(row: dict[str, str]) -> dict[str, str]:
+    expanded = dict(row)
+    for key, value in list(row.items()):
+        if ";" not in key:
+            continue
+        left, right = [part.strip() for part in key.split(";", 1)]
+        values = value.split(";", 1)
+        expanded.pop(key, None)
+        expanded[left] = values[0].strip()
+        if right:
+            expanded[right] = values[1].strip() if len(values) > 1 else ""
+    return expanded
+
+
 def _pick(row: dict[str, str], aliases: tuple[str, ...]) -> str:
     lowered = {str(k).strip().lower(): (v or "") for k, v in row.items()}
     for alias in aliases:
@@ -101,7 +115,7 @@ def load_cert_records(path: Path) -> list[CERTRecord]:
             ("case_id", "case", "caseid", "pc", "resource_id", "user"),
             ("activity", "event", "event_type", "action", "type"),
             ("timestamp", "time", "datetime", "date", "event_time"),
-            ("label", "class", "target", "is_malicious", "malicious", "anomaly"),
+            ("label", "class", "target", "is_malicious", "malicious", "anomaly", "cattivi"),
         )
         for group in required_alias_groups:
             if not any(alias.lower() in required for alias in group):
@@ -110,12 +124,13 @@ def load_cert_records(path: Path) -> list[CERTRecord]:
                 )
 
         records: list[CERTRecord] = []
-        for row in reader:
+        for raw_row in reader:
+            row = _expand_hybrid_row(raw_row)
             case_id = _pick(row, ("case_id", "case", "caseid", "pc", "resource_id", "user"))
             activity = _pick(row, ("activity", "event", "event_type", "action", "type"))
             resource = _pick(row, ("resource", "filename", "file", "pc", "user"))
             timestamp = _pick(row, ("timestamp", "time", "datetime", "date", "event_time"))
-            label = _pick(row, ("label", "class", "target", "is_malicious", "malicious", "anomaly"))
+            label = _pick(row, ("label", "class", "target", "is_malicious", "malicious", "anomaly", "cattivi"))
 
             if not case_id or not activity or not timestamp:
                 continue
