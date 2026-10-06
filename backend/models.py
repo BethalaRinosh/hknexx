@@ -110,3 +110,19 @@ class AnalysisResponse(BaseModel):
     correlated_incidents: int
     incidents: list[Incident]
     suppressed: bool
+
+
+class BehaviorSignalResponse(BaseModel):
+    event_id: str
+    entity: str | None = None
+    score: float
+    reasons: list[str]
+    anomalous: bool
+
+
+class BehaviorAnalysisResponse(BaseModel):
+    total_events: int
+    baseline_entities: int
+    anomalous_events: int
+    signals: list[BehaviorSignalResponse]
+    analysis: AnalysisResponse
