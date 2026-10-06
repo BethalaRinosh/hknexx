@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .detector import analyze
 from .models import AnalysisResponse, SecurityEvent
+from .normalizer import normalize_events
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "backend" / "data"
@@ -77,6 +78,13 @@ def analyze_logs(events: list[SecurityEvent]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
     return analyze(events)
+
+
+@app.post("/api/analyze/raw", response_model=AnalysisResponse)
+def analyze_raw_logs(events: list[dict]) -> AnalysisResponse:
+    if not events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    return analyze(normalize_events(events))
 
 
 @app.get("/api/incidents", response_model=AnalysisResponse)
