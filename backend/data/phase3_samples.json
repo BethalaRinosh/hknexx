@@ -1,0 +1,54 @@
+{
+  "windows_4624": {
+    "System": {
+      "Provider": {"Name": "Microsoft-Windows-Security-Auditing"},
+      "EventID": 4624,
+      "TimeCreated": {"SystemTime": "2026-10-06T19:05:00Z"},
+      "Computer": "WIN-DC01"
+    },
+    "EventData": {
+      "TargetUserName": "alice",
+      "TargetLogonId": "0x9ab",
+      "IpAddress": "203.0.113.44",
+      "LogonType": "10"
+    }
+  },
+  "windows_4663": {
+    "System": {
+      "Provider": {"Name": "Microsoft-Windows-Security-Auditing"},
+      "EventID": 4663,
+      "TimeCreated": {"SystemTime": "2026-10-06T19:08:00Z"},
+      "Computer": "WIN-FS01"
+    },
+    "EventData": {
+      "SubjectUserName": "alice",
+      "SubjectLogonId": "0x9ab",
+      "ObjectType": "File",
+      "ObjectName": "C:\\Finance\\acquisition.pdf",
+      "ProcessName": "C:\\Windows\\explorer.exe",
+      "AccessList": "%%4416"
+    }
+  },
+  "sysmon_1": {
+    "System": {"EventID": 1, "Computer": "WIN-DC01"},
+    "EventData": {
+      "UtcTime": "2026-10-06T19:12:00Z",
+      "User": "CORP\\alice",
+      "Image": "C:\\Windows\\System32\\powershell.exe",
+      "ProcessId": "0x1234",
+      "ParentImage": "C:\\Windows\\explorer.exe",
+      "CommandLine": "powershell.exe -enc AAAA"
+    }
+  },
+  "zeek_http": {
+    "ts": 1791313800.125,
+    "uid": "C123",
+    "id.orig_h": "10.0.0.20",
+    "id.resp_h": "93.184.216.34",
+    "id.resp_p": 443,
+    "method": "GET",
+    "host": "example.com",
+    "uri": "/download",
+    "user_agent": "Mozilla/5.0"
+  }
+}
