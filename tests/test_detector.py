@@ -110,3 +110,43 @@ def test_partial_chain_is_watchlisted_not_validated():
     assert result.correlated_incidents == 0
     assert result.watchlist_candidates == 1
     assert result.suppressed is True
+
+
+
+def test_raw_log_normalizer_maps_common_aliases():
+    from backend.normalizer import normalize_events
+
+    raw = [
+        {
+            "id": "R1",
+            "@timestamp": "2026-10-06T18:00:00Z",
+            "type": "authentication",
+            "username": "alex",
+            "hostname": "WS-44",
+            "source_ip": "185.90.8.4",
+            "app": "IdentityPortal",
+            "log_source": "windows",
+            "level": "medium",
+            "metadata": {"unusual_ip": True},
+        },
+        {
+            "eventId": "R2",
+            "timestamp": "2026-10-06T18:04:00Z",
+            "event": "file_read",
+            "account": "alex",
+            "host": "WS-44",
+            "srcip": "185.90.8.4",
+            "application": "FileServer",
+            "path": "/finance/acquisition.pdf",
+            "source": "file-monitor",
+            "severity": "high",
+            "metadata": {"sensitive": True},
+        },
+    ]
+    normalized = normalize_events(raw)
+    assert normalized[0].event_type == "login"
+    assert normalized[0].user == "alex"
+    assert normalized[0].device == "WS-44"
+    assert normalized[0].src_ip == "185.90.8.4"
+    assert normalized[1].event_type == "file_access"
+    assert normalized[1].resource == "/finance/acquisition.pdf"
