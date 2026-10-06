@@ -139,6 +139,21 @@ The initial demo data is synthetic and intentionally small so the complete chain
 
 Research validation can later use public provenance/IDS datasets such as NODLINK/PIDSMaker datasets without changing the normalized event interface.
 
+## Phase 2 validation
+
+The project contains a scenario-based false-positive benchmark in `backend/data/phase2_manifest.json` and an evaluator in `backend/evaluator.py`.
+
+The benchmark intentionally includes benign lookalikes such as:
+- authorized administrative transfers;
+- large backup operations;
+- shared-IP collisions;
+- ordinary sensitive-file access;
+- standalone USB activity;
+- partial chains;
+- reversed temporal order.
+
+The detector must produce the expected disposition for every case before Phase 3 begins.
+
 ## MVP vs stretch
 
 ### MVP
