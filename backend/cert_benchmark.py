@@ -107,9 +107,14 @@ def _activity_kind(activity: str, resource: str) -> set[str]:
 def load_cert_records(path: Path) -> list[CERTRecord]:
     with path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
         reader = csv.DictReader(handle)
-        required = {name.lower() for name in (reader.fieldnames or [])}
-        if not required:
+        raw_fieldnames = reader.fieldnames or []
+        if not raw_fieldnames:
             raise ValueError("CERT benchmark CSV has no header")
+
+        semantic_fields: set[str] = set()
+        for field in raw_fieldnames:
+            parts = [part.strip().lower() for part in field.split(";")]
+            semantic_fields.update(part for part in parts if part)
 
         required_alias_groups = (
             ("case_id", "case", "caseid", "pc", "resource_id", "user"),
@@ -118,7 +123,7 @@ def load_cert_records(path: Path) -> list[CERTRecord]:
             ("label", "class", "target", "is_malicious", "malicious", "anomaly", "cattivi"),
         )
         for group in required_alias_groups:
-            if not any(alias.lower() in required for alias in group):
+            if not any(alias.lower() in semantic_fields for alias in group):
                 raise ValueError(
                     f"CERT benchmark CSV missing required semantic column group: {group}"
                 )
