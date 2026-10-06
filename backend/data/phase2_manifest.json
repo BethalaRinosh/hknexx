@@ -1,0 +1,15 @@
+{
+  "full_attack": "validated",
+  "clean": "suppressed",
+  "login_only": "suppressed",
+  "legitimate_sensitive_access": "suppressed",
+  "usb_only": "suppressed",
+  "mismatched_entities": "suppressed",
+  "reversed_order": "watchlist",
+  "slow_attack": "suppressed",
+  "benign_backup": "suppressed",
+  "partial_attack": "watchlist",
+  "authorized_transfer": "suppressed",
+  "large_backup_with_sensitive_access": "suppressed",
+  "shared_ip_collision": "suppressed"
+}
