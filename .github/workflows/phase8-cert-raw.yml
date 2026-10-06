@@ -27,29 +27,25 @@ jobs:
           set -euo pipefail
           mkdir -p external/cert_raw external/cert_download
 
-      - name: Download official CERT r4.2 archive
+      - name: Download public mirror of official CERT r4.2 raw archive
         shell: bash
         run: |
           set -euo pipefail
-          wget             --continue             --tries=5             --timeout=60             --waitretry=5             ftp://ftp.sei.cmu.edu/pub/cert-data/r4.2.tar.bz2             -O external/cert_download/r4.2.tar.bz2
-          test -s external/cert_download/r4.2.tar.bz2
-          echo "Raw archive bytes: $(stat -c '%s' external/cert_download/r4.2.tar.bz2)"
+          curl -fL --retry 5 --retry-delay 5             "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2?datasetVersionNumber=1"             -o external/cert_download/cert-r4.2-kaggle.zip
+          test -s external/cert_download/cert-r4.2-kaggle.zip
+          echo "Kaggle raw mirror bytes: $(stat -c '%s' external/cert_download/cert-r4.2-kaggle.zip)"
 
       - name: Extract only required raw event files
         shell: bash
         run: |
           set -euo pipefail
-          tar -tjf external/cert_download/r4.2.tar.bz2             | grep -E '/(logon|device|file)\.csv$'             | tee external/cert_download/extract_manifest.txt
+          unzip -l external/cert_download/cert-r4.2-kaggle.zip             | grep -E 'r4\.2/(logon|device|file)\.csv$'             | tee external/cert_download/extract_manifest.txt
 
-          test "$(grep -cE '/(logon|device|file)\.csv$' external/cert_download/extract_manifest.txt)" -ge 3
+          test "$(grep -cE 'r4\.2/(logon|device|file)\.csv$' external/cert_download/extract_manifest.txt)" -ge 3
 
-          tar -xjf external/cert_download/r4.2.tar.bz2             --wildcards             --no-anchored             'logon.csv'             'device.csv'             'file.csv'             -C external/cert_raw
-
-          while IFS= read -r name; do
-            found="$(find external/cert_raw -type f -name "$name" | head -n 1)"
-            test -n "$found"
-            cp "$found" "external/cert_raw/$name"
-          done < <(printf '%s\n' logon.csv device.csv file.csv)
+          unzip -p external/cert_download/cert-r4.2-kaggle.zip r4.2/logon.csv > external/cert_raw/logon.csv
+          unzip -p external/cert_download/cert-r4.2-kaggle.zip r4.2/device.csv > external/cert_raw/device.csv
+          unzip -p external/cert_download/cert-r4.2-kaggle.zip r4.2/file.csv > external/cert_raw/file.csv
 
           test -s external/cert_raw/logon.csv
           test -s external/cert_raw/device.csv
