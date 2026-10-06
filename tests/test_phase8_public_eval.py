@@ -53,6 +53,8 @@ def test_public_dataset_evaluator_normalizes_a_local_public_style_stream(tmp_pat
     path.write_text('\n'.join(json.dumps(item) for item in records) + '\n', encoding='utf-8')
     monkeypatch.setenv('IMW_OTRF_SDWIN_PATH', str(path))
     spec = next(item for item in load_manifest(ROOT / 'backend' / 'data' / 'public_dataset_manifest.json') if item.dataset_id == 'OTRF_SDWIN_190301125905')
+    from dataclasses import replace
+    spec = replace(spec, format='jsonl')
     result = evaluate_public_dataset(spec)
     assert result.available is True
     assert result.status == 'validated'
