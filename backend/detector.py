@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Callable, Iterable
 
 from .attack_intel import enrich_technique, validate_emitted_techniques
+from .reconstructor import reconstruct
 from .models import (
     AnalysisResponse,
     AttackStage,
@@ -370,7 +371,15 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             # Explicitly sanctioned activity is a suppression, not a weaker alert.
             continue
 
-        if not temporal_ok or entity_score < 0.60 or confidence < 0.78:
+        reconstruction = reconstruct(cluster)
+        if (
+            not temporal_ok
+            or entity_score < 0.60
+            or confidence < 0.78
+            or not reconstruction.temporal_valid
+            or not reconstruction.selected_event_ids
+            or reconstruction.reconstruction_score < 0.65
+        ):
             watchlist += 1
             continue
 
@@ -448,6 +457,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                 graph_edges=graph_edges,
                 evidence_count=len(chain),
                 attack_techniques=attack_techniques,
+                reconstruction=reconstruction,
                 recommended_actions=[
                     "Disable or step-up authenticate the affected account.",
                     "Isolate the correlated device from the network.",
