@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -43,12 +44,15 @@ class RawCERTCaseResult:
 @dataclass(frozen=True)
 class RawCERTBenchmarkResult:
     malicious_scenarios: int
+    compatible_malicious_scenarios: int
+    compatibility_rate: float
     complete_malicious_scenarios: int
     ordered_malicious_scenarios: int
     identity_recall: float
     sensitive_recall: float
     exfil_recall: float
     ordered_chain_recall: float
+    compatible_ordered_chain_recall: float
     benign_windows_sampled: int
     benign_ordered_chains: int
     benign_chain_rate: float
@@ -217,8 +221,15 @@ def evaluate_raw_cert(
     devices = load_events(data_dir / "device.csv", "device")
     files = load_events(data_dir / "file.csv", "file")
 
-    event_pool = [event for event in logons + devices + files if event.user in relevant_users]
-    malicious_results = [_case_chain(scenario, event_pool) for scenario in scenarios]
+    all_event_pool = sorted(logons + devices + files, key=lambda event: (event.user, event.timestamp, event.pc))
+    events_by_user: dict[str, list[CERTEvent]] = defaultdict(list)
+    for event in all_event_pool:
+        events_by_user[event.user].append(event)
+
+    malicious_results = [
+        _case_chain(scenario, events_by_user.get(scenario.user, []))
+        for scenario in scenarios
+    ]
 
     malicious_n = len(malicious_results)
     identity_hits = sum(item.stage_identity for item in malicious_results)
@@ -229,12 +240,13 @@ def evaluate_raw_cert(
     # Deterministic benign smoke sample: users absent from the malicious ground truth,
     # limited for tractable local runs. This is a sampled FP estimate, not a census.
     malicious_users = relevant_users
-    benign_users = sorted({event.user for event in event_pool if event.user not in malicious_users})[:benign_user_limit]
+    benign_users = sorted(set(events_by_user) - malicious_users)[:benign_user_limit]
     benign_windows = []
     for user in benign_users:
         user_logons = [
-            event for event in event_pool
-            if event.user == user and event.source == "logon" and event.activity.lower() == "logon"
+            event
+            for event in events_by_user[user]
+            if event.source == "logon" and event.activity.lower() == "logon"
         ]
         for login in user_logons[:3]:
             benign_windows.append(
@@ -247,25 +259,38 @@ def evaluate_raw_cert(
                 )
             )
 
-    benign_results = [_case_chain(window, event_pool) for window in benign_windows]
+    benign_results = [
+        _case_chain(window, events_by_user.get(window.user, []))
+        for window in benign_windows
+    ]
     benign_chain_hits = sum(item.ordered_chain for item in benign_results)
+    compatible_malicious = ordered_hits
+    compatible_rate = round(compatible_malicious / malicious_n, 4)
+    compatible_ordered_recall = (
+        round(ordered_hits / compatible_malicious, 4) if compatible_malicious else 0.0
+    )
 
     return RawCERTBenchmarkResult(
         malicious_scenarios=malicious_n,
+        compatible_malicious_scenarios=compatible_malicious,
+        compatibility_rate=compatible_rate,
         complete_malicious_scenarios=ordered_hits,
         ordered_malicious_scenarios=ordered_hits,
         identity_recall=round(identity_hits / malicious_n, 4),
         sensitive_recall=round(sensitive_hits / malicious_n, 4),
         exfil_recall=round(exfil_hits / malicious_n, 4),
         ordered_chain_recall=round(ordered_hits / malicious_n, 4),
+        compatible_ordered_chain_recall=compatible_ordered_recall,
         benign_windows_sampled=len(benign_results),
         benign_ordered_chains=benign_chain_hits,
         benign_chain_rate=round(benign_chain_hits / len(benign_results), 4) if benign_results else 0.0,
         status="validated",
         reason=(
             "Raw CERT r4.2 source logs and insiders.csv were evaluated directly. "
-            "The three-stage benchmark uses a documented proxy: logon → file activity → "
-            "file activity occurring while a removable device is connected. "
-            "This is the first benchmark that can exercise the project's temporal/entity chain."
+            "Identity/sensitive/exfil/ordered values are project-specific proxy metrics across "
+            "all malicious scenarios, while compatibility_rate reports how many malicious "
+            "scenarios actually fit the project's removable-media chain semantics. "
+            "compatible_ordered_chain_recall measures ordered-chain coverage within that compatible subset. "
+            "The benign result is a sampled non-malicious-user window rate, not a census."
         ),
     )

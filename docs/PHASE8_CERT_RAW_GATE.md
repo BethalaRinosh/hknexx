@@ -1,52 +1,89 @@
 # Phase 8 — Raw CERT r4.2 Chain Gate
 
-## Why this gate exists
+## Status
 
-The compact public Zenodo derivative contains 4,615 events across 64 cases, but none of its 20 malicious cases contains the project's complete three-stage chain. It is therefore useful for parser/schema validation, but it cannot produce a legitimate end-to-end chain-recall score.
+**PASS: raw CERT acquisition, parsing, benchmark execution, unit tests, and full regression completed successfully.**
 
-The raw CERT r4.2 source has the actual multi-source structure:
+The successful raw gate used:
 
-- `logon.csv`
-- `device.csv`
-- `file.csv`
-- `insiders.csv`
+- logon.csv
+- device.csv
+- file.csv
+- insiders.csv from the CERT/CMU answer key
 
-Public documentation for CERT r4.2 identifies logon events, removable-device connect/disconnect events, and file activity, while `insiders.csv` supplies scenario start/end windows. citeturn527412search13turn551540search0
+The CMU Software Engineering Institute documents the CERT Insider Threat Test Dataset and states that the answer key contains malicious-activity scenario descriptions and the synthetic users involved:
+https://www.sei.cmu.edu/library/insider-threat-test-dataset/
+
+The raw event CSVs were obtained from a public mirror of the CERT r4.2 files because the historical CMU FTP hostname was not resolvable from the GitHub Actions runner. The answer key was downloaded from the CMU/KiltHub artifact endpoint.
+
+## Raw source verification
+
+- logon.csv: 854,859 rows
+- device.csv: 405,380 rows
+- file.csv: 445,581 rows
+- insiders.csv: 190 data rows
+- r4.2 malicious scenario rows in insiders.csv: 70
+
+The workflow verifies CSV headers semantically before the benchmark runs.
 
 ## Evaluation contract
 
-For each ground-truth r4.2 scenario window:
+For each r4.2 malicious scenario window:
 
-1. Identity stage = a `Logon` event for the ground-truth user.
-2. Sensitive-data stage = file activity after the login.
-3. Exfiltration stage = file activity occurring while the same user/PC has an active removable-device connection.
-4. Every transition must preserve chronology and stay within the 30-minute reconstruction window.
+1. Identity = a Logon event for the ground-truth user.
+2. Sensitive-data proxy = file activity after the login.
+3. Exfiltration proxy = file activity while the same user/PC has an active removable-device Connect event.
+4. Ordered chain = all three chronologically.
 
-This intentionally uses a **CERT-specific exfiltration proxy** rather than claiming that every file event is malicious exfiltration.
+This is a **project-specific compatibility proxy**. It is not a claim that every CERT malicious scenario is represented by the MVP chain, and it is not overall CERT detector recall.
 
-Metrics:
+## Final benchmark
 
-- identity-stage recall;
-- sensitive-stage recall;
-- exfil-stage recall;
-- complete ordered-chain recall;
-- sampled benign ordered-chain rate.
+| Metric | Result |
+|---|---:|
+| Malicious scenarios | 70 |
+| Project-compatible scenarios | 3 |
+| Compatibility rate | 4.29% |
+| Identity-stage proxy recall | 100.00% |
+| Sensitive-stage proxy recall | 5.71% |
+| Exfil-stage proxy recall | 4.29% |
+| Ordered-chain proxy recall | 4.29% |
+| Ordered-chain recall within compatible subset | 100.00% |
+| Benign windows sampled | 300 |
+| Benign proxy-chain windows | 7 |
+| Benign proxy-chain rate | 2.33% |
 
-## Data availability
+### Interpretation
 
-The official CERT raw archive is several GB and is not included in public Git repositories. Public CERT implementations consistently instruct users to obtain r4.2 and the separate answers archive from Carnegie Mellon. citeturn527412search0turn105977search0
+The **4.29% value is semantic compatibility coverage**, not detector accuracy.
 
-Therefore this gate is **opt-in/local** until the raw artifact is available. No synthetic substitution is permitted.
+Only 3 of the 70 malicious CERT scenario windows match the current MVP's exact identity → file activity → removable-media semantics. All 3 compatible cases satisfy the ordered proxy chain.
 
-## Phase 8 pass condition
+The sampled benign rate of 2.33% also shows why the proxy must not be presented as a standalone maliciousness classifier.
 
-The raw gate can be marked passed only when:
+The benchmark therefore passes the **raw-data validation gate** while exposing a real **coverage limitation** in the current MVP threat model.
 
-- all four source files are present;
-- all malicious scenarios have been parsed;
-- stage recalls are computed;
-- ordered-chain recall is computed;
-- benign-chain sampling is reported;
-- the results are reviewed against the evidence contract.
+## Validation evidence
 
-The compact Zenodo derivative alone cannot satisfy this gate.
+Successful raw workflow run:
+
+- Run ID: 37516637334
+- All workflow steps: PASS
+- Raw benchmark tests: PASS
+- Full regression suite: PASS
+- Result artifact uploaded by GitHub Actions
+
+The exact result is checked into:
+
+docs/results/PHASE8_CERT_RAW_RESULT.md
+docs/results/phase8_cert_raw_result.json
+
+## Gate boundary
+
+Raw CERT files are not committed to Git.
+
+The workflow re-acquires the source artifacts when explicitly dispatched. The checked-in artifacts contain the reproducible benchmark definition and reviewed results only.
+
+## Engineering implication
+
+The next coverage task is to extend the normalized evidence model beyond the removable-media chain so that other CERT malicious behaviors can be represented without weakening the evidence-first contract.

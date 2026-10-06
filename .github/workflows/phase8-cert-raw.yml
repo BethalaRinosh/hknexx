@@ -1,0 +1,116 @@
+name: Phase 8 Raw CERT Gate
+
+on:
+  push:
+    branches: [phase8-cert-raw-gate]
+  workflow_dispatch:
+
+jobs:
+  raw-cert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Prepare raw CERT workspace
+        run: |
+          set -euo pipefail
+          mkdir -p external/cert_raw external/cert_download
+
+      - name: Download raw CERT r4.2 source files from public mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > external/cert_download/extract_manifest.txt
+          for name in logon device file; do
+            encoded="r4.2%2F${name}.csv"
+            curl -fL --retry 5 --retry-delay 5               "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2/${encoded}?datasetVersionNumber=1"               -o "external/cert_raw/${name}.csv"
+            test -s "external/cert_raw/${name}.csv"
+            wc -l "external/cert_raw/${name}.csv"
+          done
+
+      - name: Validate raw CERT source schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          expected = {
+              "logon.csv": {"id", "date", "user", "pc", "activity"},
+              "device.csv": {"id", "date", "user", "pc", "activity"},
+              "file.csv": {"id", "date", "user", "pc", "filename", "content"},
+          }
+
+          for name, required in expected.items():
+              path = Path("external/cert_raw") / name
+              with path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+                  header = {cell.strip().lstrip("\ufeff") for cell in next(csv.reader(handle))}
+              print(name, sorted(header))
+              missing = required - header
+              assert not missing, f"{name} missing columns: {sorted(missing)}"
+          PY
+
+      - name: Download official CERT answers archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 5 --retry-delay 5             https://kilthub.cmu.edu/ndownloader/files/24857828             -o external/cert_download/answers.tar.bz2
+          test -s external/cert_download/answers.tar.bz2
+          echo "Answers archive bytes: $(stat -c '%s' external/cert_download/answers.tar.bz2)"
+
+      - name: Extract ground truth insiders.csv
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -tjf external/cert_download/answers.tar.bz2             | grep -E '(^|/)insiders\.csv$'             | tee external/cert_download/answers_manifest.txt
+
+          test -s external/cert_download/answers_manifest.txt
+
+          rm -f external/cert_raw/insiders.csv
+          rm -rf external/cert_raw/answers
+          tar -xjf external/cert_download/answers.tar.bz2             -C external/cert_raw             --strip-components=1             answers/insiders.csv
+
+          test -s external/cert_raw/insiders.csv
+          echo "CERT answers rows: $(($(wc -l < external/cert_raw/insiders.csv) - 1))"
+
+      - name: Verify raw CERT layout
+        run: python scripts/verify_cert_raw_layout.py --data-dir external/cert_raw
+
+      - name: Run raw CERT benchmark
+        run: |
+          set -euo pipefail
+          python scripts/run_cert_raw_benchmark.py             --data-dir external/cert_raw             --benign-user-limit 100             --json-out docs/results/phase8_cert_raw_result.json
+
+      - name: Run raw CERT unit tests
+        run: python -m pytest -q tests/test_phase8_cert_raw_benchmark.py
+
+      - name: Run complete regression suite
+        run: python -m pytest -q
+
+      - name: Upload raw benchmark result
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase8-cert-raw-result
+          path: |
+            docs/results/phase8_cert_raw_result.json
+            external/cert_download/extract_manifest.txt
+            external/cert_download/answers_manifest.txt
+            scripts/run_cert_raw_benchmark.py
+            backend/cert_raw_benchmark.py
+
+      - name: Print final gate result
+        run: |
+          set -euo pipefail
+          cat docs/results/phase8_cert_raw_result.json
