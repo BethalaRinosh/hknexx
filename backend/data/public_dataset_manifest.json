@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "datasets": [
+    {
+      "dataset_id": "ATLASV2_EDR",
+      "name": "ATLASv2 EDR",
+      "source_url": "https://github.com/ubc-provenance/PIDSMaker",
+      "local_path_env": "IMW_ATLASV2_PATH",
+      "format": "jsonl",
+      "description": "Windows EDR/public attack-engagement corpus with ten multi-stage attack scenarios and realistic background activity.",
+      "evaluation_mode": "attack_window",
+      "expected_techniques": []
+    },
+    {
+      "dataset_id": "OTRF_SDWIN_190301125905",
+      "name": "OTRF Security Datasets — Empire Powerview Add-DomainObjectAcl",
+      "source_url": "https://github.com/OTRF/Security-Datasets",
+      "local_path_env": "IMW_OTRF_SDWIN_PATH",
+      "format": "zip",
+      "description": "Public Windows host dataset with explicit metadata mapping to ATT&CK T1222.001.",
+      "evaluation_mode": "technique_labeled",
+      "expected_techniques": [
+        "T1222.001"
+      ]
+    }
+  ]
+}
