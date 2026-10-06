@@ -43,6 +43,8 @@ jobs:
           curl -fsSL --retry 4 --retry-delay 2             "https://zenodo.org/records/19135764/files/cert_preprocessed_ml_comparison.csv?download=1"             -o external/cert/cert_preprocessed_ml_comparison.csv
           test -s external/cert/cert_preprocessed_ml_comparison.csv
           echo "Downloaded bytes: $(wc -c < external/cert/cert_preprocessed_ml_comparison.csv)"
+          echo "CERT schema preview:"
+          head -n 3 external/cert/cert_preprocessed_ml_comparison.csv
 
       - name: Run CERT public benchmark
         run: |
