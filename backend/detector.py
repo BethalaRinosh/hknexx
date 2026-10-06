@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import timedelta
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .models import (
     AnalysisResponse,
@@ -15,6 +15,8 @@ from .models import (
 )
 
 CHAIN_WINDOW = timedelta(minutes=30)
+CANDIDATE_THRESHOLD = 0.10
+STRONG_SIGNAL_THRESHOLD = 0.25
 REQUIRED_STAGES = (
     "Initial Access / Identity Anomaly",
     "Sensitive Data Access",
@@ -38,20 +40,19 @@ def _entity_keys(event: SecurityEvent) -> set[str]:
 
 
 def _identity_compatible(a: SecurityEvent, b: SecurityEvent) -> bool:
-    # Explicit contradictions must never be glued into one campaign.
     if a.user and b.user and a.user != b.user:
         return False
     if a.device and b.device and a.device != b.device:
         return False
 
-    shared = set(filter(None, (a.user, a.device, a.src_ip))) & set(
-        filter(None, (b.user, b.device, b.src_ip))
-    )
-    return bool(shared)
+    a_identity = {x for x in (a.user, a.device, a.src_ip) if x}
+    b_identity = {x for x in (b.user, b.device, b.src_ip) if x}
+    return bool(a_identity & b_identity)
 
 
 def _event_score(event: SecurityEvent) -> float:
     score = 0.0
+
     if event.event_type == "login" and event.metadata.get("unusual_ip"):
         score += 0.45
     if event.metadata.get("new_device"):
@@ -67,7 +68,7 @@ def _event_score(event: SecurityEvent) -> float:
         elif copied_bytes >= 250_000_000:
             score += 0.20
 
-    # Severity is supporting context, not the main detector.
+    # Severity is context, not the detector.
     score += {"critical": 0.05, "high": 0.04, "medium": 0.02}.get(event.severity, 0.0)
     return min(1.0, score)
 
@@ -82,20 +83,21 @@ def _cluster(events: list[SecurityEvent]) -> list[list[SecurityEvent]]:
             if event.timestamp - cluster[0].timestamp > CHAIN_WINDOW:
                 continue
             if any(
-                _identity_compatible(event, existing)
+                event.timestamp >= existing.timestamp
+                and _identity_compatible(event, existing)
                 for existing in cluster
-                if event.timestamp >= existing.timestamp
             ):
                 cluster.append(event)
                 placed = True
                 break
+
         if not placed:
             clusters.append([event])
 
     return [sorted(cluster, key=lambda e: e.timestamp) for cluster in clusters]
 
 
-def _find(cluster: list[SecurityEvent], predicate) -> SecurityEvent | None:
+def _find(cluster: list[SecurityEvent], predicate: Callable[[SecurityEvent], bool]) -> SecurityEvent | None:
     return next((e for e in cluster if predicate(e)), None)
 
 
@@ -137,20 +139,20 @@ def _build_graph(event_chain: list[SecurityEvent]) -> tuple[list[GraphNode], lis
             ("app", f"app:{event.application}") if event.application else None,
             ("resource", f"resource:{event.resource}") if event.resource else None,
         ]
-        chain = [p for p in parts if p]
+        entity_chain = [part for part in parts if part]
 
-        for node_type, node_id in chain:
+        for node_type, node_id in entity_chain:
             nodes[node_id] = GraphNode(
                 id=node_id,
                 label=node_id.split(":", 1)[1],
                 type=labels[node_type],
             )
 
-        for (src_type, src), (dst_type, dst) in zip(chain, chain[1:]):
+        for (_, source), (_, target) in zip(entity_chain, entity_chain[1:]):
             relation = event.action or event.event_type.replace("_", " ")
-            edges[(src, dst, relation)] = GraphEdge(
-                source=src,
-                target=dst,
+            edges[(source, target, relation)] = GraphEdge(
+                source=source,
+                target=target,
                 relation=relation,
                 event_id=event.event_id,
             )
@@ -162,24 +164,30 @@ def _entity_consistency(events: list[SecurityEvent]) -> float:
     if len(events) < 2:
         return 0.0
 
-    adjacent = []
+    scores = []
     for a, b in zip(events, events[1:]):
         if not _identity_compatible(a, b):
-            adjacent.append(0.0)
+            scores.append(0.0)
             continue
-        shared = len(set(filter(None, (a.user, a.device, a.src_ip))) & set(
-            filter(None, (b.user, b.device, b.src_ip))
-        ))
-        adjacent.append(min(1.0, shared / 2))
-    return round(sum(adjacent) / len(adjacent), 2)
+
+        a_identity = {x for x in (a.user, a.device, a.src_ip) if x}
+        b_identity = {x for x in (b.user, b.device, b.src_ip) if x}
+        shared = len(a_identity & b_identity)
+        scores.append(min(1.0, shared / 2))
+
+    return round(sum(scores) / len(scores), 2)
 
 
 def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
     ordered = sorted(events, key=lambda e: e.timestamp)
     scored = [(event, _event_score(event)) for event in ordered]
-    suspicious = [event for event, score in scored if score >= 0.10]
 
-    if not suspicious:
+    # Weak context events participate in correlation, but don't inflate the
+    # headline suspicious count unless they cross the stronger signal threshold.
+    candidates = [event for event, score in scored if score >= CANDIDATE_THRESHOLD]
+    suspicious = [event for event, score in scored if score >= STRONG_SIGNAL_THRESHOLD]
+
+    if not candidates:
         return AnalysisResponse(
             total_events=len(ordered),
             suspicious_events=0,
@@ -190,10 +198,10 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             suppressed=True,
         )
 
-    clusters = _cluster(suspicious)
+    clusters = _cluster(candidates)
     incidents: list[Incident] = []
     watchlist = 0
-    evidence_events = set()
+    evidence_events: set[str] = set()
 
     for cluster in clusters:
         login = _find(
@@ -221,7 +229,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         stages: list[AttackStage] = []
 
         if stage_events[REQUIRED_STAGES[0]]:
-            ev = stage_events[REQUIRED_STAGES[0]]
+            stage_evidence = stage_events[REQUIRED_STAGES[0]]
             stages.append(
                 _stage(
                     REQUIRED_STAGES[0],
@@ -236,9 +244,9 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                                 else "Previously unseen device associated with the session."
                             ),
                         )
-                        for e in ev
+                        for e in stage_evidence
                     ],
-                    set().union(*(_entity_keys(e) for e in ev)),
+                    set().union(*(_entity_keys(e) for e in stage_evidence)),
                     "Authentication and device identity differ from the user's expected baseline.",
                 )
             )
@@ -288,7 +296,6 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         missing = [name for name in REQUIRED_STAGES if name not in found]
 
         if len(stages) < 3:
-            # A weak cluster is useful for analyst review but must not become an incident.
             if len(stages) >= 2:
                 watchlist += 1
             continue
@@ -302,21 +309,17 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             key=lambda e: e.timestamp,
         )
 
-        # Stages must appear in the expected order.
-        first_ids = [
+        first_stage_times = [
             min((e.timestamp for e in stage_events[name]), default=None)
             for name in REQUIRED_STAGES
         ]
-        temporal_ok = all(
-            t is not None for t in first_ids
-        ) and first_ids == sorted(first_ids)
+        temporal_ok = all(t is not None for t in first_stage_times) and first_stage_times == sorted(first_stage_times)
         temporal_score = 1.0 if temporal_ok else 0.35
 
         entity_score = _entity_consistency(chain)
         chain_completeness = round(len(stages) / len(REQUIRED_STAGES), 2)
-        corroboration = min(1.0, len(set(e.event_id for e in chain)) / 5)
+        corroboration = min(1.0, len({e.event_id for e in chain}) / 5)
 
-        # A complete, correctly ordered chain with consistent entities scores highest.
         confidence = round(
             min(
                 0.99,
@@ -332,9 +335,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             watchlist += 1
             continue
 
-        for event in chain:
-            evidence_events.add(event.event_id)
-
+        evidence_events.update(e.event_id for e in chain)
         all_entities = sorted(set().union(*(_entity_keys(e) for e in chain)))
         graph_nodes, graph_edges = _build_graph(chain)
 
@@ -368,12 +369,11 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             )
         )
 
-    suppressed_events = max(0, len(suspicious) - len(evidence_events))
     return AnalysisResponse(
         total_events=len(ordered),
         suspicious_events=len(suspicious),
         watchlist_candidates=watchlist,
-        suppressed_events=suppressed_events,
+        suppressed_events=max(0, len(candidates) - len(evidence_events)),
         correlated_incidents=len(incidents),
         incidents=incidents,
         suppressed=len(incidents) == 0,
