@@ -27,29 +27,28 @@ jobs:
           set -euo pipefail
           mkdir -p external/cert_raw external/cert_download
 
-      - name: Download public mirror of official CERT r4.2 raw archive
+      - name: Download raw CERT r4.2 source files from public mirror
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL --retry 5 --retry-delay 5             "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2?datasetVersionNumber=1"             -o external/cert_download/cert-r4.2-kaggle.zip
-          test -s external/cert_download/cert-r4.2-kaggle.zip
-          echo "Kaggle raw mirror bytes: $(stat -c '%s' external/cert_download/cert-r4.2-kaggle.zip)"
+          : > external/cert_download/extract_manifest.txt
+          for name in logon device file; do
+            encoded="r4.2%2F${name}.csv"
+            curl -fL --retry 5 --retry-delay 5               "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2/${encoded}?datasetVersionNumber=1"               -o "external/cert_download/${name}.zip"
+            test -s "external/cert_download/${name}.zip"
+            unzip -l "external/cert_download/${name}.zip" | tee -a external/cert_download/extract_manifest.txt
+            unzip -p "external/cert_download/${name}.zip" "r4.2/${name}.csv" > "external/cert_raw/${name}.csv"
+            test -s "external/cert_raw/${name}.csv"
+            echo "${name}.csv rows: $((\$(wc -l < "external/cert_raw/${name}.csv") - 1))"
+          done
 
-      - name: Extract only required raw event files
+      - name: Validate raw CERT source schema
         shell: bash
         run: |
           set -euo pipefail
-          unzip -l external/cert_download/cert-r4.2-kaggle.zip             | grep -E 'r4\.2/(logon|device|file)\.csv$'             | tee external/cert_download/extract_manifest.txt
-
-          test "$(grep -cE 'r4\.2/(logon|device|file)\.csv$' external/cert_download/extract_manifest.txt)" -ge 3
-
-          unzip -p external/cert_download/cert-r4.2-kaggle.zip r4.2/logon.csv > external/cert_raw/logon.csv
-          unzip -p external/cert_download/cert-r4.2-kaggle.zip r4.2/device.csv > external/cert_raw/device.csv
-          unzip -p external/cert_download/cert-r4.2-kaggle.zip r4.2/file.csv > external/cert_raw/file.csv
-
-          test -s external/cert_raw/logon.csv
-          test -s external/cert_raw/device.csv
-          test -s external/cert_raw/file.csv
+          head -n 1 external/cert_raw/logon.csv | grep -q 'id,date,user,pc,activity'
+          head -n 1 external/cert_raw/device.csv | grep -q 'id,date,user,pc,activity'
+          head -n 1 external/cert_raw/file.csv | grep -q 'id,date,user,pc,url/fname,content'
 
       - name: Download official CERT answers archive
         shell: bash
