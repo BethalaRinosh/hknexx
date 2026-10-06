@@ -1,0 +1,42 @@
+[
+  {
+    "event_id": "CLEAN-001",
+    "timestamp": "2026-10-06T08:30:00Z",
+    "event_type": "login",
+    "user": "bob",
+    "device": "DEV-02",
+    "src_ip": "10.0.0.21",
+    "application": "IdentityPortal",
+    "source": "auth",
+    "severity": "info",
+    "metadata": {"unusual_ip": false, "new_device": false}
+  },
+  {
+    "event_id": "CLEAN-002",
+    "timestamp": "2026-10-06T08:45:00Z",
+    "event_type": "file_access",
+    "user": "bob",
+    "device": "DEV-02",
+    "src_ip": "10.0.0.21",
+    "application": "FileServer",
+    "resource": "/team/project-plan.docx",
+    "action": "read",
+    "source": "file_server",
+    "severity": "info",
+    "metadata": {"sensitive": false}
+  },
+  {
+    "event_id": "CLEAN-003",
+    "timestamp": "2026-10-06T09:10:00Z",
+    "event_type": "usb_mount",
+    "user": "bob",
+    "device": "DEV-02",
+    "src_ip": "10.0.0.21",
+    "application": "EndpointManager",
+    "resource": "USB-12",
+    "action": "mount",
+    "source": "endpoint",
+    "severity": "info",
+    "metadata": {"removable": true}
+  }
+]
