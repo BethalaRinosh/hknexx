@@ -6,10 +6,10 @@
   "usb_only": "suppressed",
   "mismatched_entities": "suppressed",
   "reversed_order": "watchlist",
-  "slow_attack": "suppressed",
+  "slow_attack": "watchlist",
   "benign_backup": "suppressed",
   "partial_attack": "watchlist",
   "authorized_transfer": "suppressed",
   "large_backup_with_sensitive_access": "suppressed",
-  "shared_ip_collision": "suppressed"
+  "shared_ip_collision": "watchlist"
 }
