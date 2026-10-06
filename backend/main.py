@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from .adapters import normalize_sysmon_event, normalize_windows_event, normalize_windows_event_xml, normalize_zeek_event
 from .detector import analyze
 from .evaluator import run_phase2
 from .models import AnalysisResponse, Phase2Report, SecurityEvent
@@ -19,7 +20,7 @@ SCENARIOS = DATA / "scenarios.json"
 
 app = FastAPI(
     title="Evidence-First Cyber Threat Intelligence",
-    version="0.4.0",
+    version="0.5.0",
     description="Explainable multi-stage attack reconstruction for HNX26PSI03.",
 )
 
@@ -86,6 +87,40 @@ def analyze_raw_logs(events: list[dict]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
     return analyze(normalize_events(events))
+
+
+@app.post("/api/analyze/windows", response_model=AnalysisResponse)
+def analyze_windows(events: list[dict]) -> AnalysisResponse:
+    if not events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    normalized = [normalize_windows_event(event, index=i) for i, event in enumerate(events)]
+    return analyze(normalized)
+
+
+@app.post("/api/analyze/windows/xml", response_model=AnalysisResponse)
+def analyze_windows_xml(events: list[str]) -> AnalysisResponse:
+    if not events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    normalized = [normalize_windows_event_xml(event, index=i) for i, event in enumerate(events)]
+    return analyze(normalized)
+
+
+@app.post("/api/analyze/sysmon", response_model=AnalysisResponse)
+def analyze_sysmon(events: list[dict]) -> AnalysisResponse:
+    if not events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    normalized = [normalize_sysmon_event(event, index=i) for i, event in enumerate(events)]
+    return analyze(normalized)
+
+
+@app.post("/api/analyze/zeek", response_model=AnalysisResponse)
+def analyze_zeek(payload: dict) -> AnalysisResponse:
+    events = payload.get("events") or []
+    stream = str(payload.get("stream") or "conn")
+    if not events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    normalized = [normalize_zeek_event(event, stream=stream, index=i) for i, event in enumerate(events)]
+    return analyze(normalized)
 
 
 @app.get("/api/phase2/report", response_model=Phase2Report)
