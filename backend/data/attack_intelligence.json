@@ -1,0 +1,80 @@
+{
+  "attack_version": "19.2",
+  "source": "MITRE ATT&CK Enterprise",
+  "techniques": [
+    {
+      "technique_id": "T1078",
+      "name": "Valid Accounts",
+      "tactic": "Initial Access",
+      "description": "Adversaries may obtain and abuse credentials of existing accounts.",
+      "attack_version": "19.2",
+      "technique_version": "3.0",
+      "detection_strategy_id": "DET0560",
+      "detection_strategy_name": "Detection of Valid Account Abuse Across Platforms",
+      "analytics": [
+        "AN1543",
+        "AN1545",
+        "AN1546"
+      ],
+      "log_sources": [
+        "WinEventLog:Security 4624",
+        "WinEventLog:Security 4776/4625",
+        "Sysmon 1"
+      ],
+      "rationale": "An identity-anomaly stage built from an unusual authentication event is mapped to Valid Accounts as a candidate behavioral technique; the engine does not assert credential theft itself.",
+      "mapping_type": "behavioral_inference",
+      "mapping_confidence": 0.72,
+      "source_url": "https://attack.mitre.org/techniques/T1078/"
+    },
+    {
+      "technique_id": "T1005",
+      "name": "Data from Local System",
+      "tactic": "Collection",
+      "description": "Adversaries may search local system sources to find files of interest and sensitive data prior to Exfiltration.",
+      "attack_version": "19.2",
+      "technique_version": "1.8",
+      "detection_strategy_id": "DET0380",
+      "detection_strategy_name": "Detection of Local Data Collection Prior to Exfiltration",
+      "analytics": [
+        "AN1070",
+        "AN1071",
+        "AN1072",
+        "AN1073",
+        "AN1074"
+      ],
+      "log_sources": [
+        "WinEventLog:Security 4688",
+        "Sysmon 11"
+      ],
+      "rationale": "A sensitive local resource access is mapped to local-data collection because the stage represents acquisition of sensitive data before a removable-media transfer.",
+      "mapping_type": "stage_inference",
+      "mapping_confidence": 0.84,
+      "source_url": "https://attack.mitre.org/techniques/T1005/"
+    },
+    {
+      "technique_id": "T1052.001",
+      "name": "Exfiltration over USB",
+      "tactic": "Exfiltration",
+      "description": "Adversaries may attempt to exfiltrate data over a USB connected physical device.",
+      "attack_version": "19.2",
+      "technique_version": "1.1",
+      "detection_strategy_id": "DET0220",
+      "detection_strategy_name": "Detection of USB-Based Data Exfiltration",
+      "analytics": [
+        "AN0616",
+        "AN0617",
+        "AN0618"
+      ],
+      "log_sources": [
+        "WinEventLog:Sysmon 1",
+        "WinEventLog:Sysmon 11",
+        "WinEventLog:Security 4663",
+        "WinEventLog:System drive creation"
+      ],
+      "rationale": "A removable-media mount followed by a large copy to a USB destination provides direct evidence for physical-medium exfiltration over USB.",
+      "mapping_type": "stage_inference",
+      "mapping_confidence": 0.96,
+      "source_url": "https://attack.mitre.org/techniques/T1052/001/"
+    }
+  ]
+}
