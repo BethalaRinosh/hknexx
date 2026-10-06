@@ -1,0 +1,476 @@
+{
+  "full_attack": [
+    {
+      "event_id": "ATTACK-001",
+      "timestamp": "2026-10-06T09:12:00Z",
+      "event_type": "login",
+      "user": "alice",
+      "device": "DEV-07",
+      "src_ip": "185.12.22.14",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "ATTACK-002",
+      "timestamp": "2026-10-06T09:14:00Z",
+      "event_type": "device_enroll",
+      "user": "alice",
+      "device": "DEV-07",
+      "src_ip": "185.12.22.14",
+      "application": "EndpointManager",
+      "source": "endpoint",
+      "severity": "medium",
+      "metadata": {
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "ATTACK-003",
+      "timestamp": "2026-10-06T09:17:00Z",
+      "event_type": "file_access",
+      "user": "alice",
+      "device": "DEV-07",
+      "src_ip": "185.12.22.14",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true
+      }
+    },
+    {
+      "event_id": "ATTACK-004",
+      "timestamp": "2026-10-06T09:20:00Z",
+      "event_type": "usb_mount",
+      "user": "alice",
+      "device": "DEV-07",
+      "src_ip": "185.12.22.14",
+      "application": "EndpointManager",
+      "resource": "USB-44",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "high",
+      "metadata": {
+        "removable": true
+      }
+    },
+    {
+      "event_id": "ATTACK-005",
+      "timestamp": "2026-10-06T09:21:00Z",
+      "event_type": "file_copy",
+      "user": "alice",
+      "device": "DEV-07",
+      "src_ip": "185.12.22.14",
+      "application": "FileExplorer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "copy_to_usb",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 2400000000,
+        "destination": "USB-44"
+      }
+    }
+  ],
+  "login_only": [
+    {
+      "event_id": "LOGIN-001",
+      "timestamp": "2026-10-06T10:00:00Z",
+      "event_type": "login",
+      "user": "charlie",
+      "device": "DEV-09",
+      "src_ip": "185.88.10.4",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "LOGIN-002",
+      "timestamp": "2026-10-06T10:01:00Z",
+      "event_type": "device_enroll",
+      "user": "charlie",
+      "device": "DEV-09",
+      "src_ip": "185.88.10.4",
+      "application": "EndpointManager",
+      "source": "endpoint",
+      "severity": "medium",
+      "metadata": {
+        "new_device": true
+      }
+    }
+  ],
+  "legitimate_sensitive_access": [
+    {
+      "event_id": "LEGIT-001",
+      "timestamp": "2026-10-06T11:00:00Z",
+      "event_type": "login",
+      "user": "bob",
+      "device": "DEV-02",
+      "src_ip": "10.0.0.21",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "info",
+      "metadata": {
+        "unusual_ip": false,
+        "new_device": false
+      }
+    },
+    {
+      "event_id": "LEGIT-002",
+      "timestamp": "2026-10-06T11:04:00Z",
+      "event_type": "file_access",
+      "user": "bob",
+      "device": "DEV-02",
+      "src_ip": "10.0.0.21",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "medium",
+      "metadata": {
+        "sensitive": true
+      }
+    },
+    {
+      "event_id": "LEGIT-003",
+      "timestamp": "2026-10-06T11:06:00Z",
+      "event_type": "file_close",
+      "user": "bob",
+      "device": "DEV-02",
+      "src_ip": "10.0.0.21",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "close",
+      "source": "file_server",
+      "severity": "info",
+      "metadata": {
+        "sensitive": true
+      }
+    }
+  ],
+  "usb_only": [
+    {
+      "event_id": "USB-001",
+      "timestamp": "2026-10-06T12:00:00Z",
+      "event_type": "login",
+      "user": "dina",
+      "device": "DEV-04",
+      "src_ip": "10.0.0.44",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "info",
+      "metadata": {
+        "unusual_ip": false,
+        "new_device": false
+      }
+    },
+    {
+      "event_id": "USB-002",
+      "timestamp": "2026-10-06T12:05:00Z",
+      "event_type": "usb_mount",
+      "user": "dina",
+      "device": "DEV-04",
+      "src_ip": "10.0.0.44",
+      "application": "EndpointManager",
+      "resource": "USB-12",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "info",
+      "metadata": {
+        "removable": true
+      }
+    }
+  ],
+  "mismatched_entities": [
+    {
+      "event_id": "MIX-001",
+      "timestamp": "2026-10-06T13:00:00Z",
+      "event_type": "login",
+      "user": "erin",
+      "device": "DEV-05",
+      "src_ip": "172.16.0.5",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "MIX-002",
+      "timestamp": "2026-10-06T13:03:00Z",
+      "event_type": "file_access",
+      "user": "erin",
+      "device": "DEV-99",
+      "src_ip": "172.16.0.5",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true
+      }
+    },
+    {
+      "event_id": "MIX-003",
+      "timestamp": "2026-10-06T13:06:00Z",
+      "event_type": "usb_mount",
+      "user": "frank",
+      "device": "DEV-99",
+      "src_ip": "172.16.0.5",
+      "application": "EndpointManager",
+      "resource": "USB-90",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "high",
+      "metadata": {
+        "removable": true
+      }
+    },
+    {
+      "event_id": "MIX-004",
+      "timestamp": "2026-10-06T13:07:00Z",
+      "event_type": "file_copy",
+      "user": "frank",
+      "device": "DEV-99",
+      "src_ip": "172.16.0.5",
+      "application": "FileExplorer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "copy_to_usb",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 2400000000,
+        "destination": "USB-90"
+      }
+    }
+  ],
+  "reversed_order": [
+    {
+      "event_id": "REV-001",
+      "timestamp": "2026-10-06T14:00:00Z",
+      "event_type": "login",
+      "user": "gina",
+      "device": "DEV-11",
+      "src_ip": "185.55.2.8",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "REV-002",
+      "timestamp": "2026-10-06T14:02:00Z",
+      "event_type": "usb_mount",
+      "user": "gina",
+      "device": "DEV-11",
+      "src_ip": "185.55.2.8",
+      "application": "EndpointManager",
+      "resource": "USB-77",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "high",
+      "metadata": {
+        "removable": true
+      }
+    },
+    {
+      "event_id": "REV-003",
+      "timestamp": "2026-10-06T14:03:00Z",
+      "event_type": "file_copy",
+      "user": "gina",
+      "device": "DEV-11",
+      "src_ip": "185.55.2.8",
+      "application": "FileExplorer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "copy_to_usb",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 2400000000,
+        "destination": "USB-77"
+      }
+    },
+    {
+      "event_id": "REV-004",
+      "timestamp": "2026-10-06T14:05:00Z",
+      "event_type": "file_access",
+      "user": "gina",
+      "device": "DEV-11",
+      "src_ip": "185.55.2.8",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true
+      }
+    }
+  ],
+  "slow_attack": [
+    {
+      "event_id": "SLOW-001",
+      "timestamp": "2026-10-06T15:00:00Z",
+      "event_type": "login",
+      "user": "harry",
+      "device": "DEV-15",
+      "src_ip": "185.77.5.1",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "medium",
+      "metadata": {
+        "unusual_ip": true,
+        "new_device": true
+      }
+    },
+    {
+      "event_id": "SLOW-002",
+      "timestamp": "2026-10-06T15:40:00Z",
+      "event_type": "file_access",
+      "user": "harry",
+      "device": "DEV-15",
+      "src_ip": "185.77.5.1",
+      "application": "FileServer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "read",
+      "source": "file_server",
+      "severity": "high",
+      "metadata": {
+        "sensitive": true
+      }
+    },
+    {
+      "event_id": "SLOW-003",
+      "timestamp": "2026-10-06T15:43:00Z",
+      "event_type": "usb_mount",
+      "user": "harry",
+      "device": "DEV-15",
+      "src_ip": "185.77.5.1",
+      "application": "EndpointManager",
+      "resource": "USB-88",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "high",
+      "metadata": {
+        "removable": true
+      }
+    },
+    {
+      "event_id": "SLOW-004",
+      "timestamp": "2026-10-06T15:44:00Z",
+      "event_type": "file_copy",
+      "user": "harry",
+      "device": "DEV-15",
+      "src_ip": "185.77.5.1",
+      "application": "FileExplorer",
+      "resource": "/finance/acquisition.pdf",
+      "action": "copy_to_usb",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 2400000000,
+        "destination": "USB-88"
+      }
+    }
+  ],
+  "benign_backup": [
+    {
+      "event_id": "BACK-001",
+      "timestamp": "2026-10-06T16:00:00Z",
+      "event_type": "login",
+      "user": "ivy",
+      "device": "DEV-21",
+      "src_ip": "10.0.0.21",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "info",
+      "metadata": {
+        "unusual_ip": false,
+        "new_device": false
+      }
+    },
+    {
+      "event_id": "BACK-002",
+      "timestamp": "2026-10-06T16:03:00Z",
+      "event_type": "file_copy",
+      "user": "ivy",
+      "device": "DEV-21",
+      "src_ip": "10.0.0.21",
+      "application": "BackupAgent",
+      "resource": "/team/",
+      "action": "backup",
+      "source": "endpoint",
+      "severity": "critical",
+      "metadata": {
+        "bytes": 8000000000,
+        "destination": "backup-server"
+      }
+    }
+  ],
+  "clean": [
+    {
+      "event_id": "CLEAN-001",
+      "timestamp": "2026-10-06T08:30:00Z",
+      "event_type": "login",
+      "user": "bob",
+      "device": "DEV-02",
+      "src_ip": "10.0.0.21",
+      "application": "IdentityPortal",
+      "source": "auth",
+      "severity": "info",
+      "metadata": {
+        "unusual_ip": false,
+        "new_device": false
+      }
+    },
+    {
+      "event_id": "CLEAN-002",
+      "timestamp": "2026-10-06T08:45:00Z",
+      "event_type": "file_access",
+      "user": "bob",
+      "device": "DEV-02",
+      "src_ip": "10.0.0.21",
+      "application": "FileServer",
+      "resource": "/team/project-plan.docx",
+      "action": "read",
+      "source": "file_server",
+      "severity": "info",
+      "metadata": {
+        "sensitive": false
+      }
+    },
+    {
+      "event_id": "CLEAN-003",
+      "timestamp": "2026-10-06T09:10:00Z",
+      "event_type": "usb_mount",
+      "user": "bob",
+      "device": "DEV-02",
+      "src_ip": "10.0.0.21",
+      "application": "EndpointManager",
+      "resource": "USB-12",
+      "action": "mount",
+      "source": "endpoint",
+      "severity": "info",
+      "metadata": {
+        "removable": true
+      }
+    }
+  ]
+}
