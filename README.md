@@ -86,8 +86,15 @@ API:
 - GET /health
 - GET /api/demo/attack
 - GET /api/demo/clean
-- POST /api/analyze
+- POST /api/analyze — normalized events
+- POST /api/analyze/raw — heterogeneous/raw events
 - GET /api/incidents
+
+## Validation scenarios
+
+The dashboard includes repeatable scenarios for full attacks, benign activity, partial chains, entity mismatches, reversed ordering, slow campaigns, and large benign backups. The goal is to demonstrate that the detector does not turn every anomaly into an incident.
+
+See `docs/DETECTION_SPEC.md` for the exact scoring, correlation window, stage requirements and disposition rules.
 
 ## Current detection philosophy
 
