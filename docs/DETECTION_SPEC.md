@@ -132,3 +132,20 @@ The evaluator is available through `/api/phase2/report`.
 The detector intentionally avoids a large model in the critical decision path.
 
 The competition asks for accurate entity linking, evidence for every stage, correct ordering, explainability and low false positives. A deterministic evidence layer therefore provides a transparent foundation that can later be augmented with lightweight ML or an LLM without making the final decision opaque.
+
+
+## 12. ATT&CK enrichment
+
+Validated incidents may be enriched with a pinned ATT&CK Enterprise v19.2 mapping catalog.
+
+ATT&CK is descriptive enrichment only. Technique labels never create an incident or override the evidence-first campaign decision.
+
+Each emitted technique mapping carries:
+- technique/sub-technique ID and name;
+- tactic;
+- Detection Strategy and selected Analytics;
+- evidence event IDs;
+- rationale;
+- mapping confidence.
+
+The current demo uses T1078 for the identity-anomaly stage, T1005 for sensitive local data collection, and T1052.001 for USB exfiltration.

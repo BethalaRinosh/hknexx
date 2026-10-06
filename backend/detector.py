@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import timedelta
 from typing import Callable, Iterable
 
+from .attack_intel import enrich_technique, validate_emitted_techniques
 from .models import (
     AnalysisResponse,
     AttackStage,
@@ -305,7 +306,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             stages.append(
                 _stage(
                     REQUIRED_STAGES[2],
-                    "T1025" if has_copy else None,
+                    "T1052.001" if has_copy else None,
                     0.96 if has_copy and usb else (0.82 if has_copy else 0.60),
                     [
                         EvidenceItem(
@@ -377,6 +378,54 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         all_entities = sorted(set().union(*(_entity_keys(e) for e in chain)))
         graph_nodes, graph_edges = _build_graph(chain)
 
+        attack_techniques = []
+        initial_evidence = stage_events[REQUIRED_STAGES[0]]
+        if initial_evidence:
+            mapped = enrich_technique(
+                "T1078",
+                initial_evidence,
+                rationale=(
+                    "The identity stage is linked to Valid Accounts because the "
+                    "correlated authentication pattern is consistent with misuse of "
+                    "an existing account; credential theft itself is not asserted."
+                ),
+                mapping_type="behavioral_inference",
+                mapping_confidence=0.72,
+            )
+            if mapped:
+                attack_techniques.append(mapped)
+
+        if sensitive:
+            mapped = enrich_technique(
+                "T1005",
+                [sensitive],
+                rationale=(
+                    "The chain contains sensitive local-resource access immediately "
+                    "before the physical-medium transfer stage."
+                ),
+                mapping_type="stage_inference",
+                mapping_confidence=0.84,
+            )
+            if mapped:
+                attack_techniques.append(mapped)
+
+        if copy:
+            exfil_evidence = [event for event in (usb, copy) if event]
+            mapped = enrich_technique(
+                "T1052.001",
+                exfil_evidence,
+                rationale=(
+                    "The chain contains removable-media insertion plus a large copy "
+                    "whose destination/action identifies the USB device."
+                ),
+                mapping_type="stage_inference",
+                mapping_confidence=0.96,
+            )
+            if mapped:
+                attack_techniques.append(mapped)
+
+        validate_emitted_techniques(item.technique_id for item in attack_techniques)
+
         incidents.append(
             Incident(
                 incident_id=f"INC-{key_for_incident(chain)}",
@@ -398,6 +447,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                 graph_nodes=graph_nodes,
                 graph_edges=graph_edges,
                 evidence_count=len(chain),
+                attack_techniques=attack_techniques,
                 recommended_actions=[
                     "Disable or step-up authenticate the affected account.",
                     "Isolate the correlated device from the network.",

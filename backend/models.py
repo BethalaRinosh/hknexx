@@ -74,6 +74,7 @@ class Incident(BaseModel):
     graph_edges: list[GraphEdge]
     evidence_count: int
     recommended_actions: list[str]
+    attack_techniques: list[AttackTechnique] = Field(default_factory=list)
 
 
 Disposition = Literal["validated", "watchlist", "suppressed"]
@@ -126,3 +127,20 @@ class BehaviorAnalysisResponse(BaseModel):
     anomalous_events: int
     signals: list[BehaviorSignalResponse]
     analysis: AnalysisResponse
+
+
+class AttackTechnique(BaseModel):
+    technique_id: str
+    name: str
+    tactic: str
+    description: str
+    attack_version: str
+    technique_version: str
+    detection_strategy_id: str | None = None
+    detection_strategy_name: str | None = None
+    analytics: list[str] = Field(default_factory=list)
+    log_sources: list[str] = Field(default_factory=list)
+    evidence_event_ids: list[str]
+    rationale: str
+    mapping_type: Literal["stage_inference", "behavioral_inference"] = "stage_inference"
+    mapping_confidence: float
