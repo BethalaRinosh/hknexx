@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evidence-First CTI</title>
+  <title>Evidence-First CTI · Judge Console</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -12,19 +12,26 @@
       <div>
         <p class="eyebrow">HNX26PSI03 · AI-POWERED CYBER THREAT INTELLIGENCE</p>
         <h1>Evidence-First Attack Reconstruction</h1>
-        <p class="subtitle">Correlate events. Prove every stage. Stay silent on benign activity.</p>
+        <p class="subtitle">Detect the campaign, reconstruct the causal chain, and show exactly why every stage is supported.</p>
       </div>
       <div class="controls">
-        <button id="attackBtn" class="primary">Run Full Attack</button>
+        <button id="attackBtn" class="primary">Run Judge Demo</button>
         <button id="cleanBtn">Run Clean</button>
       </div>
     </header>
+
+    <section class="judge-strip">
+      <div><span>DETECTION</span><strong>Multi-stage correlation</strong></div>
+      <div><span>PROOF</span><strong>Event-ID evidence</strong></div>
+      <div><span>INTELLIGENCE</span><strong>MITRE ATT&CK</strong></div>
+      <div><span>CONTROL</span><strong>Benign suppression</strong></div>
+    </section>
 
     <section class="panel scenario-panel">
       <div class="panel-head">
         <div>
           <h2>Scenario Lab</h2>
-          <div class="muted">Intentionally test what the detector should alert on — and what it must ignore.</div>
+          <div class="muted">Use adversarial cases to demonstrate what the engine alerts on — and what it deliberately ignores.</div>
         </div>
         <div class="controls">
           <select id="scenarioSelect"></select>
@@ -36,8 +43,8 @@
     <section class="panel validation-panel">
       <div class="panel-head">
         <div>
-          <h2>Phase 2 Validation Gate</h2>
-          <div class="muted">Detector must pass every adversarial scenario before we advance to Phase 3.</div>
+          <h2>Validation Status</h2>
+          <div class="muted">Phase 2 gate remains visible so the demo never hides false-positive performance.</div>
         </div>
         <span id="phase2Pill" class="pill">RUNNING</span>
       </div>
@@ -46,35 +53,51 @@
 
     <section class="stats" id="stats"></section>
 
+    <section id="incidentBanner" class="incident-banner"></section>
+
     <section class="grid">
       <article class="panel timeline-panel">
-        <div class="panel-head"><h2>Attack Timeline</h2><span id="statusPill" class="pill">—</span></div>
+        <div class="panel-head"><h2>1 · Attack Timeline</h2><span id="statusPill" class="pill">—</span></div>
         <div id="timeline" class="timeline"></div>
       </article>
 
       <article class="panel">
-        <div class="panel-head"><h2>Campaign Risk</h2></div>
+        <div class="panel-head"><h2>2 · Campaign Risk</h2><span class="muted">why the chain crosses the incident threshold</span></div>
         <div id="risk"></div>
+        <div id="confidence" class="confidence"></div>
       </article>
 
       <article class="panel span-2">
-        <div class="panel-head"><h2>Attack Graph</h2><span class="muted">entities linked by observed events</span></div>
+        <div class="panel-head"><h2>3 · Entity Graph</h2><span class="muted">user · device · IP · application · resource</span></div>
         <div id="graph" class="graph-wrap"></div>
       </article>
 
       <article class="panel span-2">
-        <div class="panel-head"><h2>Attack Stages & Evidence</h2></div>
+        <div class="panel-head"><h2>4 · Attack Stages & Evidence</h2><span class="muted">every stage must have proof</span></div>
         <div id="stages" class="stage-grid"></div>
       </article>
 
-      <article class="panel">
-        <div class="panel-head"><h2>Entities</h2></div>
-        <div id="entities" class="chips"></div>
+      <article class="panel span-2">
+        <div class="panel-head">
+          <h2>5 · Deterministic Reconstruction</h2>
+          <span id="reconstructionPill" class="pill">—</span>
+        </div>
+        <div id="reconstruction" class="reconstruction"></div>
       </article>
 
       <article class="panel">
-        <div class="panel-head"><h2>Recommended Response</h2></div>
-        <div id="response"></div>
+        <div class="panel-head"><h2>6 · ATT&CK Intelligence</h2></div>
+        <div id="attackIntel" class="intel-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>7 · Entities</h2></div>
+        <div id="entities" class="chips"></div>
+      </article>
+
+      <article class="panel span-2">
+        <div class="panel-head"><h2>8 · Recommended Response</h2><span class="muted">deterministic response guidance</span></div>
+        <div id="response" class="response-grid"></div>
       </article>
     </section>
   </main>
