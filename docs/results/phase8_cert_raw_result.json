@@ -1,0 +1,36 @@
+{
+  "dataset": "CERT Insider Threat Test Dataset r4.2",
+  "malicious_scenarios": 70,
+  "compatible_malicious_scenarios": 3,
+  "compatibility_rate": 0.0429,
+  "complete_malicious_scenarios": 3,
+  "ordered_malicious_scenarios": 3,
+  "identity_recall": 1,
+  "sensitive_recall": 0.0571,
+  "exfil_recall": 0.0429,
+  "ordered_chain_recall": 0.0429,
+  "compatible_ordered_chain_recall": 1,
+  "benign_windows_sampled": 300,
+  "benign_ordered_chains": 7,
+  "benign_chain_rate": 0.0233,
+  "status": "validated",
+  "raw_source_files": {
+    "logon.csv": {
+      "rows": 854859,
+      "bytes": 58514706
+    },
+    "device.csv": {
+      "rows": 405380,
+      "bytes": 28982749
+    },
+    "file.csv": {
+      "rows": 445581,
+      "bytes": 193055265
+    },
+    "insiders.csv": {
+      "data_rows": 190,
+      "bytes": 13792
+    }
+  },
+  "workflow_run": 37516637334
+}
