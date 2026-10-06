@@ -71,6 +71,32 @@ class Incident(BaseModel):
     recommended_actions: list[str]
 
 
+Disposition = Literal["validated", "watchlist", "suppressed"]
+
+
+class EvaluationCase(BaseModel):
+    scenario: str
+    expected: Disposition
+    actual: Disposition
+    passed: bool
+    incidents: int
+    watchlist_candidates: int
+    suspicious_events: int
+    reason: str
+
+
+class Phase2Report(BaseModel):
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    accuracy: float
+    validated_cases: int
+    false_positive_cases: int
+    missed_attack_cases: int
+    watchlist_cases: int
+    cases: list[EvaluationCase]
+
+
 class AnalysisResponse(BaseModel):
     total_events: int
     suspicious_events: int
