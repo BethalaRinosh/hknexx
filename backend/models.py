@@ -53,6 +53,25 @@ class GraphEdge(BaseModel):
     event_id: str
 
 
+class ReconstructionEdge(BaseModel):
+    source_event_id: str
+    target_event_id: str
+    relation: str
+    score: float
+    reasons: list[str]
+
+
+class AttackReconstruction(BaseModel):
+    selected_event_ids: list[str]
+    stage_event_ids: dict[str, list[str]]
+    reconstruction_score: float
+    temporal_valid: bool
+    entity_conflicts: int
+    decoy_event_ids: list[str]
+    edges: list[ReconstructionEdge]
+    explanation: str
+
+
 class Incident(BaseModel):
     incident_id: str
     title: str
@@ -75,6 +94,7 @@ class Incident(BaseModel):
     evidence_count: int
     recommended_actions: list[str]
     attack_techniques: list[AttackTechnique] = Field(default_factory=list)
+    reconstruction: AttackReconstruction | None = None
 
 
 Disposition = Literal["validated", "watchlist", "suppressed"]
