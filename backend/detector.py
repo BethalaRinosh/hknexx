@@ -68,6 +68,12 @@ def _event_score(event: SecurityEvent) -> float:
         elif copied_bytes >= 250_000_000:
             score += 0.20
 
+    # Behavior anomaly is supporting context, not campaign confidence.
+    # The maximum contribution is deliberately small so a single unusual
+    # event cannot become a validated incident by itself.
+    behavior_score = float(event.metadata.get("behavior_score", 0.0) or 0.0)
+    score += min(0.15, 0.15 * max(0.0, behavior_score))
+
     # Severity is context, not the detector.
     score += {"critical": 0.05, "high": 0.04, "medium": 0.02}.get(event.severity, 0.0)
     return min(1.0, score)
