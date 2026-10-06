@@ -4,7 +4,15 @@ from collections import defaultdict
 from datetime import timedelta
 from typing import Iterable
 
-from .models import AnalysisResponse, AttackStage, EvidenceItem, Incident, SecurityEvent
+from .models import (
+    AnalysisResponse,
+    AttackStage,
+    EvidenceItem,
+    GraphEdge,
+    GraphNode,
+    Incident,
+    SecurityEvent,
+)
 
 
 DEMO_WINDOW = timedelta(minutes=30)
@@ -23,6 +31,44 @@ def _entity_keys(event: SecurityEvent) -> set[str]:
     if event.resource:
         keys.add(f"resource:{event.resource}")
     return keys
+
+
+def _graph(event_chain: list[SecurityEvent]) -> tuple[list[GraphNode], list[GraphEdge]]:
+    nodes: dict[str, GraphNode] = {}
+    edges: dict[tuple[str, str, str], GraphEdge] = {}
+
+    labels = {
+        "user": "User",
+        "device": "Device",
+        "ip": "IP",
+        "app": "Application",
+        "resource": "Resource",
+    }
+
+    for event in event_chain:
+        ordered = [
+            ("user", f"user:{event.user}") if event.user else None,
+            ("device", f"device:{event.device}") if event.device else None,
+            ("ip", f"ip:{event.src_ip}") if event.src_ip else None,
+            ("app", f"app:{event.application}") if event.application else None,
+            ("resource", f"resource:{event.resource}") if event.resource else None,
+        ]
+        chain = [item for item in ordered if item]
+        for node_type, node_id in chain:
+            raw = node_id.split(":", 1)[1]
+            nodes[node_id] = GraphNode(id=node_id, label=raw, type=labels[node_type])
+
+        for (src_type, src), (dst_type, dst) in zip(chain, chain[1:]):
+            relation = event.action or event.event_type.replace("_", " ")
+            key = (src, dst, relation)
+            edges[key] = GraphEdge(
+                source=src,
+                target=dst,
+                relation=relation,
+                event_id=event.event_id,
+            )
+
+    return list(nodes.values()), list(edges.values())
 
 
 def _event_score(event: SecurityEvent) -> float:
@@ -53,7 +99,7 @@ def _same_campaign(events: list[SecurityEvent]) -> list[SecurityEvent]:
     events = sorted(events, key=lambda e: e.timestamp)
     anchor = events[0]
 
-    candidates = [
+    return [
         e for e in events
         if e.timestamp - anchor.timestamp <= DEMO_WINDOW
         and (
@@ -62,7 +108,6 @@ def _same_campaign(events: list[SecurityEvent]) -> list[SecurityEvent]:
             or (anchor.src_ip and e.src_ip == anchor.src_ip)
         )
     ]
-    return candidates
 
 
 def _stage(events: list[SecurityEvent], event_type: str) -> SecurityEvent | None:
@@ -93,17 +138,11 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         chain = _same_campaign(group)
 
         login = next(
-            (
-                e for e in chain
-                if e.event_type == "login" and e.metadata.get("unusual_ip", False)
-            ),
+            (e for e in chain if e.event_type == "login" and e.metadata.get("unusual_ip", False)),
             None,
         )
         file_access = next(
-            (
-                e for e in chain
-                if e.event_type == "file_access" and e.metadata.get("sensitive", False)
-            ),
+            (e for e in chain if e.event_type == "file_access" and e.metadata.get("sensitive", False)),
             None,
         )
         usb = _stage(chain, "usb_mount")
@@ -117,8 +156,6 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         )
 
         evidence = [e for e in (login, file_access, usb, copy) if e is not None]
-
-        # A single anomaly is deliberately insufficient.
         if len(evidence) < 3:
             continue
 
@@ -130,7 +167,12 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                     stage="Initial Access / Credential Misuse",
                     technique="T1078",
                     confidence=0.86,
-                    evidence=[EvidenceItem(event_id=login.event_id, reason="Unusual authentication from a previously unseen IP.")],
+                    evidence=[
+                        EvidenceItem(
+                            event_id=login.event_id,
+                            reason="Unusual authentication from a previously unseen IP.",
+                        )
+                    ],
                     entities=sorted(_entity_keys(login)),
                     reason="The authentication differs from the user's observed baseline.",
                 )
@@ -142,7 +184,12 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                     stage="Sensitive Data Access",
                     technique="T1005",
                     confidence=0.90,
-                    evidence=[EvidenceItem(event_id=file_access.event_id, reason="Sensitive resource accessed after anomalous authentication.")],
+                    evidence=[
+                        EvidenceItem(
+                            event_id=file_access.event_id,
+                            reason="Sensitive resource accessed after anomalous authentication.",
+                        )
+                    ],
                     entities=sorted(_entity_keys(file_access)),
                     reason="The same user/device reached a marked sensitive resource.",
                 )
@@ -154,7 +201,12 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                     stage="Removable Media Access",
                     technique="T1025",
                     confidence=0.91,
-                    evidence=[EvidenceItem(event_id=usb.event_id, reason="Removable media was mounted during the suspicious session.")],
+                    evidence=[
+                        EvidenceItem(
+                            event_id=usb.event_id,
+                            reason="Removable media was mounted during the suspicious session.",
+                        )
+                    ],
                     entities=sorted(_entity_keys(usb)),
                     reason="A removable device appeared within the correlated attack window.",
                 )
@@ -166,7 +218,12 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                     stage="Collection / Exfiltration",
                     technique="T1025",
                     confidence=0.96,
-                    evidence=[EvidenceItem(event_id=copy.event_id, reason="Large-volume file transfer to removable media.")],
+                    evidence=[
+                        EvidenceItem(
+                            event_id=copy.event_id,
+                            reason="Large-volume file transfer to removable media.",
+                        )
+                    ],
                     entities=sorted(_entity_keys(copy)),
                     reason="The transfer volume and timing strongly support data exfiltration.",
                 )
@@ -178,6 +235,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         risk = min(100, int(round(confidence * 100)))
 
         all_entities = sorted(set().union(*(_entity_keys(e) for e in chain)))
+        graph_nodes, graph_edges = _graph(chain)
         first_seen = chain[0].timestamp
         last_seen = chain[-1].timestamp
 
@@ -194,6 +252,8 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
                 entities=all_entities,
                 timeline=chain,
                 stages=stages,
+                graph_nodes=graph_nodes,
+                graph_edges=graph_edges,
                 evidence_count=len(evidence),
                 recommended_actions=[
                     "Disable or step-up authenticate the affected account.",
