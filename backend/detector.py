@@ -360,7 +360,7 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
         # superficially attack-like workflow. This is intentionally conservative:
         # one approval flag alone never suppresses an incident.
         if authorized_context >= 2 and bool(copy):
-            watchlist += 1
+            # Explicitly sanctioned activity is a suppression, not a weaker alert.
             continue
 
         if not temporal_ok or entity_score < 0.60 or confidence < 0.78:
