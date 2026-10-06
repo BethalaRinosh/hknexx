@@ -48,7 +48,7 @@ def test_clean_logs_stay_silent():
 def test_login_only_is_not_an_attack():
     result = analyze(load_scenarios()["login_only"])
     assert result.correlated_incidents == 0
-    assert result.watchlist_candidates == 1
+    assert result.watchlist_candidates == 0
     assert result.suppressed is True
 
 
@@ -87,4 +87,26 @@ def test_slow_attack_outside_window_is_not_validated():
 def test_large_benign_backup_does_not_equal_exfiltration():
     result = analyze(load_scenarios()["benign_backup"])
     assert result.correlated_incidents == 0
+    assert result.suppressed is True
+
+
+
+def test_partial_chain_is_watchlisted_not_validated():
+    events = [
+        SecurityEvent(event_id="P1", timestamp="2026-10-06T17:00:00Z", event_type="login",
+                      user="jane", device="DEV-30", src_ip="185.88.20.2",
+                      application="IdentityPortal", source="auth", severity="medium",
+                      metadata={"unusual_ip": True, "new_device": True}),
+        SecurityEvent(event_id="P2", timestamp="2026-10-06T17:03:00Z", event_type="device_enroll",
+                      user="jane", device="DEV-30", src_ip="185.88.20.2",
+                      application="EndpointManager", source="endpoint", severity="medium",
+                      metadata={"new_device": True}),
+        SecurityEvent(event_id="P3", timestamp="2026-10-06T17:06:00Z", event_type="file_access",
+                      user="jane", device="DEV-30", src_ip="185.88.20.2",
+                      application="FileServer", resource="/finance/report.pdf", action="read",
+                      source="file_server", severity="high", metadata={"sensitive": True}),
+    ]
+    result = analyze(events)
+    assert result.correlated_incidents == 0
+    assert result.watchlist_candidates == 1
     assert result.suppressed is True
