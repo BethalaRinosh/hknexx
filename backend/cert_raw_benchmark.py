@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -221,8 +222,14 @@ def evaluate_raw_cert(
     files = load_events(data_dir / "file.csv", "file")
 
     all_event_pool = sorted(logons + devices + files, key=lambda event: (event.user, event.timestamp, event.pc))
-    malicious_event_pool = [event for event in all_event_pool if event.user in relevant_users]
-    malicious_results = [_case_chain(scenario, malicious_event_pool) for scenario in scenarios]
+    events_by_user: dict[str, list[CERTEvent]] = defaultdict(list)
+    for event in all_event_pool:
+        events_by_user[event.user].append(event)
+
+    malicious_results = [
+        _case_chain(scenario, events_by_user.get(scenario.user, []))
+        for scenario in scenarios
+    ]
 
     malicious_n = len(malicious_results)
     identity_hits = sum(item.stage_identity for item in malicious_results)
@@ -233,12 +240,13 @@ def evaluate_raw_cert(
     # Deterministic benign smoke sample: users absent from the malicious ground truth,
     # limited for tractable local runs. This is a sampled FP estimate, not a census.
     malicious_users = relevant_users
-    benign_users = sorted({event.user for event in all_event_pool if event.user not in malicious_users})[:benign_user_limit]
+    benign_users = sorted(set(events_by_user) - malicious_users)[:benign_user_limit]
     benign_windows = []
     for user in benign_users:
         user_logons = [
-            event for event in all_event_pool
-            if event.user == user and event.source == "logon" and event.activity.lower() == "logon"
+            event
+            for event in events_by_user[user]
+            if event.source == "logon" and event.activity.lower() == "logon"
         ]
         for login in user_logons[:3]:
             benign_windows.append(
@@ -251,7 +259,10 @@ def evaluate_raw_cert(
                 )
             )
 
-    benign_results = [_case_chain(window, all_event_pool) for window in benign_windows]
+    benign_results = [
+        _case_chain(window, events_by_user.get(window.user, []))
+        for window in benign_windows
+    ]
     benign_chain_hits = sum(item.ordered_chain for item in benign_results)
     compatible_malicious = ordered_hits
     compatible_rate = round(compatible_malicious / malicious_n, 4)
