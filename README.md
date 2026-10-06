@@ -96,6 +96,16 @@ The dashboard includes repeatable scenarios for full attacks, benign activity, p
 
 See `docs/DETECTION_SPEC.md` for the exact scoring, correlation window, stage requirements and disposition rules.
 
+## Phase 4 — Behavior baseline layer
+
+The system now learns lightweight per-user/device historical baselines for source IPs, devices, applications, event types, activity hours, and daily activity volume.
+
+Behavior anomaly scores are explicitly separated from campaign confidence. A novel IP or device can raise suspicion, but a validated incident still requires the existing multi-stage evidence chain, temporal ordering, entity consistency and corroborating evidence.
+
+The behavior API accepts historical normalized events plus current events at `POST /api/analyze/behavior` and returns per-event scores and human-readable reasons.
+
+See `docs/PHASE4_SPEC.md` for the gate and false-positive policy.
+
 ## Current detection philosophy
 
 ### Event score
