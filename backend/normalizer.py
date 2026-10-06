@@ -12,7 +12,12 @@ ALIASES = {
     "user": ("user", "username", "account", "principal", "actor"),
     "device": ("device", "device_id", "hostname", "host", "computer"),
     "src_ip": ("src_ip", "source_ip", "srcip", "client_ip", "ip"),
-    "application": ("application", "app", "process", "service", "program"),
+    "dst_ip": ("dst_ip", "destination_ip", "dstip", "server_ip"),
+    "application": ("application", "app", "service", "program"),
+    "process": ("process", "process_name", "image"),
+    "pid": ("pid", "process_id", "ProcessId"),
+    "parent_process": ("parent_process", "parent_image", "ParentImage"),
+    "session_id": ("session_id", "logon_id", "LogonId", "session"),
     "resource": ("resource", "file", "path", "object"),
     "action": ("action", "operation", "activity"),
     "source": ("source", "log_source", "vendor", "channel"),
@@ -29,7 +34,6 @@ def _first(raw: dict[str, Any], names: tuple[str, ...]) -> Any:
 
 def _timestamp(value: Any) -> datetime:
     if isinstance(value, (int, float)):
-        # Heuristic: milliseconds are much larger than Unix seconds.
         seconds = float(value) / 1000 if float(value) > 10_000_000_000 else float(value)
         return datetime.fromtimestamp(seconds, tz=timezone.utc)
 
@@ -38,7 +42,7 @@ def _timestamp(value: Any) -> datetime:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def _canonical_event_type(value: Any) -> str:
+def canonical_event_type(value: Any) -> str:
     text = str(value or "unknown").strip().lower().replace("-", "_").replace(" ", "_")
     mappings = {
         "authentication": "login",
@@ -62,7 +66,13 @@ def normalize_event(raw: dict[str, Any], index: int = 0) -> SecurityEvent:
 
     event_id = _first(raw, ALIASES["event_id"]) or f"NORM-{index + 1:05d}"
     timestamp = _timestamp(_first(raw, ALIASES["timestamp"]))
-    event_type = _canonical_event_type(_first(raw, ALIASES["event_type"]))
+    event_type = canonical_event_type(_first(raw, ALIASES["event_type"]))
+
+    pid = _first(raw, ALIASES["pid"])
+    try:
+        pid = int(str(pid), 0) if pid is not None else None
+    except (TypeError, ValueError):
+        pid = None
 
     return SecurityEvent(
         event_id=str(event_id),
@@ -71,7 +81,12 @@ def normalize_event(raw: dict[str, Any], index: int = 0) -> SecurityEvent:
         user=_first(raw, ALIASES["user"]),
         device=_first(raw, ALIASES["device"]),
         src_ip=_first(raw, ALIASES["src_ip"]),
+        dst_ip=_first(raw, ALIASES["dst_ip"]),
         application=_first(raw, ALIASES["application"]),
+        process=_first(raw, ALIASES["process"]),
+        pid=pid,
+        parent_process=_first(raw, ALIASES["parent_process"]),
+        session_id=_first(raw, ALIASES["session_id"]),
         resource=_first(raw, ALIASES["resource"]),
         action=_first(raw, ALIASES["action"]),
         source=str(_first(raw, ALIASES["source"]) or "unknown"),
