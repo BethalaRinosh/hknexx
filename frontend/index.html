@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evidence-First CTI</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">HNX26PSI03 · AI-POWERED CYBER THREAT INTELLIGENCE</p>
+        <h1>Evidence-First Attack Reconstruction</h1>
+        <p class="subtitle">Correlate events. Prove every stage. Stay silent on benign activity.</p>
+      </div>
+      <div class="controls">
+        <button id="attackBtn" class="primary">Run Attack Demo</button>
+        <button id="cleanBtn">Run Clean Demo</button>
+      </div>
+    </header>
+
+    <section class="stats" id="stats"></section>
+
+    <section class="grid">
+      <article class="panel timeline-panel">
+        <div class="panel-head"><h2>Attack Timeline</h2><span id="statusPill" class="pill">—</span></div>
+        <div id="timeline" class="timeline"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Campaign Risk</h2></div>
+        <div id="risk"></div>
+      </article>
+
+      <article class="panel span-2">
+        <div class="panel-head"><h2>Attack Stages & Evidence</h2></div>
+        <div id="stages" class="stage-grid"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Entities</h2></div>
+        <div id="entities" class="chips"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Recommended Response</h2></div>
+        <div id="response"></div>
+      </article>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
