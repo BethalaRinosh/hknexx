@@ -34,12 +34,9 @@ jobs:
           : > external/cert_download/extract_manifest.txt
           for name in logon device file; do
             encoded="r4.2%2F${name}.csv"
-            curl -fL --retry 5 --retry-delay 5               "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2/${encoded}?datasetVersionNumber=1"               -o "external/cert_download/${name}.zip"
-            test -s "external/cert_download/${name}.zip"
-            unzip -l "external/cert_download/${name}.zip" | tee -a external/cert_download/extract_manifest.txt
-            unzip -p "external/cert_download/${name}.zip" "r4.2/${name}.csv" > "external/cert_raw/${name}.csv"
+            curl -fL --retry 5 --retry-delay 5               "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2/${encoded}?datasetVersionNumber=1"               -o "external/cert_raw/${name}.csv"
             test -s "external/cert_raw/${name}.csv"
-            echo "${name}.csv rows: $((\$(wc -l < "external/cert_raw/${name}.csv") - 1))"
+            wc -l "external/cert_raw/${name}.csv"
           done
 
       - name: Validate raw CERT source schema
