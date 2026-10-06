@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from .adapters import normalize_sysmon_event, normalize_windows_event, normalize_windows_event_xml, normalize_zeek_event
 from .behavior import build_profiles, enrich_events
 from .detector import analyze
+from .reconstructor import reconstruct
 from .evaluator import run_phase2
 from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, Phase2Report, SecurityEvent
 from .normalizer import normalize_events
@@ -122,6 +123,13 @@ def analyze_zeek(payload: dict) -> AnalysisResponse:
         raise HTTPException(status_code=400, detail="events must not be empty")
     normalized = [normalize_zeek_event(event, stream=stream, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
+
+
+@app.post("/api/reconstruct")
+def reconstruct_attack(events: list[SecurityEvent]) -> dict:
+    if not events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    return reconstruct(events).model_dump(mode="json")
 
 
 @app.post("/api/analyze/behavior", response_model=BehaviorAnalysisResponse)
