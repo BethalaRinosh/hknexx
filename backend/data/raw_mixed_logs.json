@@ -1,0 +1,27 @@
+[
+  {
+    "id": "RAW-001",
+    "@timestamp": "2026-10-06T18:00:00Z",
+    "type": "authentication",
+    "username": "alex",
+    "hostname": "WS-44",
+    "source_ip": "185.90.8.4",
+    "app": "IdentityPortal",
+    "log_source": "windows",
+    "level": "medium",
+    "metadata": {"unusual_ip": true, "new_device": true}
+  },
+  {
+    "eventId": "RAW-002",
+    "timestamp": "2026-10-06T18:04:00Z",
+    "event": "file_read",
+    "account": "alex",
+    "host": "WS-44",
+    "srcip": "185.90.8.4",
+    "application": "FileServer",
+    "path": "/finance/acquisition.pdf",
+    "source": "dataloss-monitor",
+    "severity": "high",
+    "metadata": {"sensitive": true}
+  }
+]
