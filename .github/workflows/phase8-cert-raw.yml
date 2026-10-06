@@ -43,9 +43,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          head -n 1 external/cert_raw/logon.csv | grep -q 'id,date,user,pc,activity'
-          head -n 1 external/cert_raw/device.csv | grep -q 'id,date,user,pc,activity'
-          head -n 1 external/cert_raw/file.csv | grep -q 'id,date,user,pc,url/fname,content'
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          expected = {
+              "logon.csv": {"id", "date", "user", "pc", "activity"},
+              "device.csv": {"id", "date", "user", "pc", "activity"},
+              "file.csv": {"id", "date", "user", "pc", "url/fname", "content"},
+          }
+
+          for name, required in expected.items():
+              path = Path("external/cert_raw") / name
+              with path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+                  header = {cell.strip().lstrip("\ufeff") for cell in next(csv.reader(handle))}
+              print(name, sorted(header))
+              missing = required - header
+              assert not missing, f"{name} missing columns: {sorted(missing)}"
+          PY
 
       - name: Download official CERT answers archive
         shell: bash
