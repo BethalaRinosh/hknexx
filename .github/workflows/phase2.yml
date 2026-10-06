@@ -1,0 +1,39 @@
+name: Phase 2 Validation
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  phase2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run Phase 2 tests
+        run: python -m pytest -q
+
+      - name: Run Phase 2 scenario report
+        run: |
+          python - <<'PY'
+          from backend.evaluator import run_phase2
+          report = run_phase2()
+          print(f"PHASE2_ACCURACY={report.accuracy}")
+          print(f"PHASE2_CASES={report.total_cases}")
+          print(f"PHASE2_PASSED={report.passed_cases}")
+          print(f"PHASE2_FAILED={report.failed_cases}")
+          print(f"PHASE2_FALSE_POSITIVES={report.false_positive_cases}")
+          print(f"PHASE2_MISSED_ATTACKS={report.missed_attack_cases}")
+          for case in report.cases:
+              print(f"{case.scenario}: expected={case.expected} actual={case.actual} passed={case.passed}")
+          assert report.failed_cases == 0
+          assert report.false_positive_cases == 0
+          assert report.missed_attack_cases == 0
+          PY
