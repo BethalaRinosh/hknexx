@@ -7,6 +7,8 @@ const risk = document.getElementById("risk");
 const graph = document.getElementById("graph");
 const pill = document.getElementById("statusPill");
 const scenarioSelect = document.getElementById("scenarioSelect");
+const phase2Report = document.getElementById("phase2Report");
+const phase2Pill = document.getElementById("phase2Pill");
 
 function stat(label, value) {
   return `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`;
@@ -136,6 +138,33 @@ async function load(path) {
   render(data);
 }
 
+async function loadPhase2Report() {
+  const res = await fetch("/api/phase2/report");
+  const data = await res.json();
+
+  const status = data.failed_cases === 0 && data.false_positive_cases === 0 && data.missed_attack_cases === 0;
+  phase2Pill.textContent = status ? "PASS" : "FAIL";
+  phase2Pill.className = status ? "pill safe" : "pill danger";
+
+  phase2Report.innerHTML = `
+    <div class="validation-stat"><span>Cases</span><strong>${data.total_cases}</strong></div>
+    <div class="validation-stat"><span>Passed</span><strong>${data.passed_cases}</strong></div>
+    <div class="validation-stat"><span>Accuracy</span><strong>${Math.round(data.accuracy * 100)}%</strong></div>
+    <div class="validation-stat"><span>False Positives</span><strong>${data.false_positive_cases}</strong></div>
+    <div class="validation-stat"><span>Missed Attacks</span><strong>${data.missed_attack_cases}</strong></div>
+    <div class="validation-stat"><span>Watchlist</span><strong>${data.watchlist_cases}</strong></div>
+  `;
+
+  if (data.failed_cases > 0) {
+    phase2Report.innerHTML += `
+      <div class="validation-failures">
+        <strong>Cases needing fixes</strong>
+        ${data.cases.filter(c => !c.passed).map(c => `<div>${pretty(c.scenario)} — expected <b>${c.expected}</b>, got <b>${c.actual}</b></div>`).join("")}
+      </div>
+    `;
+  }
+}
+
 async function loadScenarios() {
   const res = await fetch("/api/scenarios");
   const data = await res.json();
@@ -148,4 +177,5 @@ document.getElementById("cleanBtn").onclick = () => load("/api/demo/clean");
 document.getElementById("scenarioBtn").onclick = () => load(`/api/demo/${scenarioSelect.value}`);
 
 loadScenarios();
+loadPhase2Report();
 load("/api/demo/full_attack");
