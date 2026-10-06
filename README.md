@@ -134,6 +134,16 @@ Every attack stage contains:
 The UI can therefore answer **why** an incident was raised instead of presenting a black-box alert.
 
 ## Phase 5 — Grounded ATT&CK intelligence
+## Phase 6 — Temporal attack reconstruction
+
+Validated incidents now include a deterministic causal reconstruction layer. Candidate stage evidence is converted into an identity- and time-aware graph, feasible paths are scored, and the highest-scoring minimal attack skeleton is retained.
+
+The reconstruction records edge reasons, reconstruction confidence, temporal validity, identity conflicts and non-selected attack-like decoys. The minimal path can therefore explain the causal backbone without pretending every nearby event is part of the attack.
+
+`POST /api/reconstruct` exposes the reconstruction engine directly.
+
+See `docs/PHASE6_SPEC.md` for the path-scoring and adversarial gate.
+
 
 Validated incidents are now enriched with a pinned **MITRE ATT&CK Enterprise v19.2** catalog. Each mapping includes the technique/sub-technique, tactic, ATT&CK version, Detection Strategy, selected analytics, evidence event IDs, rationale and mapping confidence.
 
