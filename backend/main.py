@@ -13,10 +13,11 @@ from .models import AnalysisResponse, SecurityEvent
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "backend" / "data"
 FRONTEND = ROOT / "frontend"
+SCENARIOS = DATA / "scenarios.json"
 
 app = FastAPI(
     title="Evidence-First Cyber Threat Intelligence",
-    version="0.2.0",
+    version="0.3.0",
     description="Explainable multi-stage attack reconstruction for HNX26PSI03.",
 )
 
@@ -24,10 +25,18 @@ app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 
 
 def load_events(name: str) -> list[SecurityEvent]:
-    path = DATA / name
-    with path.open("r", encoding="utf-8") as f:
+    with (DATA / name).open("r", encoding="utf-8") as f:
         raw = json.load(f)
     return [SecurityEvent.model_validate(item) for item in raw]
+
+
+def load_scenarios() -> dict[str, list[SecurityEvent]]:
+    with SCENARIOS.open("r", encoding="utf-8") as f:
+        raw = json.load(f)
+    return {
+        name: [SecurityEvent.model_validate(item) for item in events]
+        for name, events in raw.items()
+    }
 
 
 @app.get("/")
@@ -38,6 +47,19 @@ def index() -> FileResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "evidence-first-cti"}
+
+
+@app.get("/api/scenarios")
+def scenarios() -> dict[str, list[str]]:
+    return {"scenarios": sorted(load_scenarios().keys())}
+
+
+@app.get("/api/demo/{scenario}", response_model=AnalysisResponse)
+def demo_scenario(scenario: str) -> AnalysisResponse:
+    available = load_scenarios()
+    if scenario not in available:
+        raise HTTPException(status_code=404, detail=f"unknown scenario: {scenario}")
+    return analyze(available[scenario])
 
 
 @app.get("/api/demo/attack", response_model=AnalysisResponse)
