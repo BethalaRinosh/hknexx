@@ -33,6 +33,34 @@ jobs:
           set -euo pipefail
           test -s external/attack_data/datasets/attack_techniques/T1070/atomic_red_team/windows-sysmon.log
 
+
+
+      - name: Download public CERT labeled event sample
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p external/cert
+          curl -fsSL --retry 4 --retry-delay 2             "https://zenodo.org/records/19135764/files/cert_preprocessed_ml_comparison.csv?download=1"             -o external/cert/cert_preprocessed_ml_comparison.csv
+          test -s external/cert/cert_preprocessed_ml_comparison.csv
+          echo "Downloaded bytes: $(wc -c < external/cert/cert_preprocessed_ml_comparison.csv)"
+
+      - name: Run CERT public benchmark
+        run: |
+          python -m pytest -q tests/test_phase8_cert_benchmark.py
+          python - <<'PY'
+          from pathlib import Path
+          from backend.cert_benchmark import evaluate_cert
+
+          path = Path("external/cert/cert_preprocessed_ml_comparison.csv")
+          result = evaluate_cert(path)
+          print(result)
+          assert result.status == "validated"
+          assert result.total_events >= 4000
+          assert result.malicious_cases > 0
+          assert result.benign_cases > 0
+          assert 0.15 <= result.malicious_cases / result.total_cases <= 0.60
+          PY
+
       - name: Run full regression suite
         run: python -m pytest -q
 
