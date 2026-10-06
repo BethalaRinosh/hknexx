@@ -150,3 +150,32 @@ def test_raw_log_normalizer_maps_common_aliases():
     assert normalized[0].src_ip == "185.90.8.4"
     assert normalized[1].event_type == "file_access"
     assert normalized[1].resource == "/finance/acquisition.pdf"
+
+
+
+def test_authorized_transfer_is_suppressed():
+    result = analyze(load_scenarios()["authorized_transfer"])
+    assert result.correlated_incidents == 0
+    assert result.watchlist_candidates == 0
+    assert result.suppressed is True
+
+
+def test_large_backup_with_sensitive_access_is_suppressed():
+    result = analyze(load_scenarios()["large_backup_with_sensitive_access"])
+    assert result.correlated_incidents == 0
+    assert result.suppressed is True
+
+
+def test_shared_ip_does_not_merge_different_users():
+    result = analyze(load_scenarios()["shared_ip_collision"])
+    assert result.correlated_incidents == 0
+    assert result.suppressed is True
+
+
+def test_phase2_manifest_has_zero_false_positives_and_missed_attacks():
+    from backend.evaluator import run_phase2
+
+    report = run_phase2()
+    assert report.failed_cases == 0
+    assert report.false_positive_cases == 0
+    assert report.missed_attack_cases == 0
