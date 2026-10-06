@@ -8,7 +8,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .detector import analyze
-from .models import AnalysisResponse, SecurityEvent
+from .evaluator import run_phase2
+from .models import AnalysisResponse, Phase2Report, SecurityEvent
 from .normalizer import normalize_events
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -18,7 +19,7 @@ SCENARIOS = DATA / "scenarios.json"
 
 app = FastAPI(
     title="Evidence-First Cyber Threat Intelligence",
-    version="0.3.0",
+    version="0.4.0",
     description="Explainable multi-stage attack reconstruction for HNX26PSI03.",
 )
 
@@ -85,6 +86,11 @@ def analyze_raw_logs(events: list[dict]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
     return analyze(normalize_events(events))
+
+
+@app.get("/api/phase2/report", response_model=Phase2Report)
+def phase2_report() -> Phase2Report:
+    return run_phase2()
 
 
 @app.get("/api/incidents", response_model=AnalysisResponse)
