@@ -208,7 +208,9 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             cluster,
             lambda e: e.event_type == "login" and bool(e.metadata.get("unusual_ip")),
         )
-        new_device = _find(cluster, lambda e: bool(e.metadata.get("new_device")))
+        new_device = _find(cluster, lambda e: e.event_type == "device_enroll" and bool(e.metadata.get("new_device")))
+        if not new_device:
+            new_device = _find(cluster, lambda e: e.event_type != "login" and bool(e.metadata.get("new_device")))
         sensitive = _find(
             cluster,
             lambda e: e.event_type == "file_access" and bool(e.metadata.get("sensitive")),
