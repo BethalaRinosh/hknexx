@@ -50,7 +50,7 @@ jobs:
           expected = {
               "logon.csv": {"id", "date", "user", "pc", "activity"},
               "device.csv": {"id", "date", "user", "pc", "activity"},
-              "file.csv": {"id", "date", "user", "pc", "url/fname", "content"},
+              "file.csv": {"id", "date", "user", "pc", "filename", "content"},
           }
 
           for name, required in expected.items():
