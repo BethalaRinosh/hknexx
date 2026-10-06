@@ -8,9 +8,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .adapters import normalize_sysmon_event, normalize_windows_event, normalize_windows_event_xml, normalize_zeek_event
+from .behavior import build_profiles, enrich_events
 from .detector import analyze
 from .evaluator import run_phase2
-from .models import AnalysisResponse, Phase2Report, SecurityEvent
+from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, Phase2Report, SecurityEvent
 from .normalizer import normalize_events
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -121,6 +122,38 @@ def analyze_zeek(payload: dict) -> AnalysisResponse:
         raise HTTPException(status_code=400, detail="events must not be empty")
     normalized = [normalize_zeek_event(event, stream=stream, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
+
+
+@app.post("/api/analyze/behavior", response_model=BehaviorAnalysisResponse)
+def analyze_behavior(payload: dict) -> BehaviorAnalysisResponse:
+    baseline = payload.get("baseline") or []
+    events = payload.get("events") or []
+    if not baseline:
+        raise HTTPException(status_code=400, detail="baseline must contain historical events")
+    if not events:
+        raise HTTPException(status_code=400, detail="events must contain events to score")
+
+    baseline_events = [SecurityEvent.model_validate(item) for item in baseline]
+    current_events = [SecurityEvent.model_validate(item) for item in events]
+    enriched, signals = enrich_events(baseline_events, current_events)
+
+    analysis = analyze(enriched)
+    return BehaviorAnalysisResponse(
+        total_events=len(enriched),
+        baseline_entities=len(build_profiles(baseline_events)),
+        anomalous_events=sum(1 for signal in signals if signal.anomalous),
+        signals=[
+            BehaviorSignalResponse(
+                event_id=signal.event_id,
+                entity=signal.entity,
+                score=signal.score,
+                reasons=signal.reasons,
+                anomalous=signal.anomalous,
+            )
+            for signal in signals
+        ],
+        analysis=analysis,
+    )
 
 
 @app.get("/api/phase2/report", response_model=Phase2Report)
