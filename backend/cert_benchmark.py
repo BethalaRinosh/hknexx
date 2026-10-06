@@ -85,6 +85,17 @@ def _parse_timestamp(value: str) -> datetime:
         raise
 
 
+def _parse_row_timestamp(row: dict[str, str]) -> datetime | None:
+    preferred = _pick(row, ("timestamp", "time", "datetime", "date", "event_time"))
+    candidates = [preferred] + [value for value in row.values() if value and value != preferred]
+    for candidate in candidates:
+        try:
+            return _parse_timestamp(candidate)
+        except (TypeError, ValueError):
+            continue
+    return None
+
+
 def _activity_kind(activity: str, resource: str) -> set[str]:
     text = f"{activity} {resource}".lower()
     kinds: set[str] = set()
@@ -134,10 +145,10 @@ def load_cert_records(path: Path) -> list[CERTRecord]:
             case_id = _pick(row, ("case_id", "case", "caseid", "pc", "resource_id", "user"))
             activity = _pick(row, ("activity", "event", "event_type", "action", "type"))
             resource = _pick(row, ("resource", "filename", "file", "pc", "user"))
-            timestamp = _pick(row, ("timestamp", "time", "datetime", "date", "event_time"))
+            parsed_timestamp = _parse_row_timestamp(row)
             label = _pick(row, ("label", "class", "target", "is_malicious", "malicious", "anomaly", "cattivi"))
 
-            if not case_id or not activity or not timestamp:
+            if not case_id or not activity or parsed_timestamp is None:
                 continue
 
             records.append(
@@ -145,7 +156,7 @@ def load_cert_records(path: Path) -> list[CERTRecord]:
                     case_id=case_id,
                     activity=activity,
                     resource=resource,
-                    timestamp=_parse_timestamp(timestamp),
+                    timestamp=parsed_timestamp,
                     malicious=_parse_bool(label),
                 )
             )
