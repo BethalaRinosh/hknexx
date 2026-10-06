@@ -78,13 +78,13 @@ def _activity_kind(activity: str, resource: str) -> set[str]:
     if re.search(r"\blogon\b|\blogin\b|\bauth", text):
         kinds.add(LOGIN_STAGE)
 
-    if re.search(r"\bfile\b|\bread\b|\baccess\b|\bopen\b|\bwrite\b", text):
+    if re.search(r"file|read|access|open|write", text):
         kinds.add(FILE_STAGE)
 
-    if re.search(r"\busb\b|\bremovable\b|\bdevice\b|\bdisconnect\b|\bconnect\b", text):
+    if re.search(r"usb|removable|device|disconnect|connect", text):
         kinds.add(EXFIL_STAGE)
 
-    if re.search(r"\bcopy\b|\btransfer\b|\bremovable\b|\busb\b", text):
+    if re.search(r"copy|transfer|removable|usb", text):
         kinds.add(EXFIL_STAGE)
 
     return kinds
