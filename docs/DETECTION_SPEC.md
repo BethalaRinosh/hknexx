@@ -87,6 +87,32 @@ A partial or suspiciously structured chain that needs investigation but does not
 
 Events that do not form a supported attack chain remain quiet.
 
+Explicitly sanctioned activity can also be suppressed when at least two independent authorization/context signals are present alongside a removable-media transfer. This is intentionally stricter than treating authorization as a single-event allow rule.
+
+## 10. Exfiltration evidence gate
+
+A large file copy is not considered removable-media exfiltration solely because its size is large.
+
+For the MVP, collection/exfiltration evidence requires a large transfer plus at least one removable-media indicator:
+- USB/removable destination;
+- copy-to-USB/removable action; or
+- explicit removable-destination metadata.
+
+This prevents ordinary backup jobs from becoming exfiltration evidence.
+
+## 11. Phase 2 pass gate
+
+Phase 2 is passed only when the scenario evaluator reports:
+
+- **0 false-positive validated incidents**
+- **0 missed validated attacks**
+- every scenario matches its expected disposition
+- full attack remains validated
+- partial/reversed chains remain watchlisted
+- benign lookalikes remain suppressed
+
+The evaluator is available through `/api/phase2/report`.
+
 ## 8. Demo validation matrix
 
 | Scenario | Expected result |
