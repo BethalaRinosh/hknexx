@@ -16,7 +16,7 @@ FRONTEND = ROOT / "frontend"
 
 app = FastAPI(
     title="Evidence-First Cyber Threat Intelligence",
-    version="0.1.0",
+    version="0.2.0",
     description="Explainable multi-stage attack reconstruction for HNX26PSI03.",
 )
 
