@@ -6,6 +6,7 @@ const response = document.getElementById("response");
 const risk = document.getElementById("risk");
 const graph = document.getElementById("graph");
 const pill = document.getElementById("statusPill");
+const scenarioSelect = document.getElementById("scenarioSelect");
 
 function stat(label, value) {
   return `<div class="stat"><span>${label}</span><strong>${value}</strong></div>`;
@@ -13,6 +14,10 @@ function stat(label, value) {
 
 function esc(value) {
   return String(value).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+}
+
+function pretty(name) {
+  return name.replaceAll("_", " ").replace(/w/g, c => c.toUpperCase());
 }
 
 function renderGraph(nodes, edges) {
@@ -25,17 +30,19 @@ function renderGraph(nodes, edges) {
   const height = 330;
   const positions = {};
   const lanes = {User:70, Device:145, IP:220, Application:220, Resource:295};
-
   const groups = {};
+
   nodes.forEach(n => {
-    const lane = lanes[n.type] || 220;
     groups[n.type] ||= [];
     groups[n.type].push(n);
   });
 
   for (const [type, group] of Object.entries(groups)) {
     group.forEach((n, i) => {
-      positions[n.id] = { x: 90 + i * (width - 140) / Math.max(1, group.length - 1), y: lanes[type] || 165 };
+      positions[n.id] = {
+        x: 90 + i * (width - 140) / Math.max(1, group.length - 1),
+        y: lanes[type] || 165
+      };
     });
   }
 
@@ -62,9 +69,9 @@ function renderGraph(nodes, edges) {
 function render(data) {
   stats.innerHTML = [
     stat("Events processed", data.total_events),
-    stat("Suspicious signals", data.suspicious_events),
+    stat("Strong signals", data.suspicious_events),
+    stat("Watchlist clusters", data.watchlist_candidates),
     stat("Validated incidents", data.correlated_incidents),
-    stat("Suppressed", data.suppressed ? "YES" : "NO"),
   ].join("");
 
   const incident = data.incidents[0];
@@ -76,7 +83,7 @@ function render(data) {
     graph.innerHTML = '<div class="empty">No attack graph because no incident was validated.</div>';
     stages.innerHTML = "";
     entities.innerHTML = "";
-    response.innerHTML = '<div class="empty">No response action recommended.</div>';
+    response.innerHTML = `<div class="empty">${data.suppressed_events} candidate events were suppressed from becoming an incident.</div>`;
     risk.innerHTML = '<div class="risk-clean">LOW RISK</div>';
     return;
   }
@@ -88,6 +95,7 @@ function render(data) {
     <div class="risk-score">${incident.risk_score}<span>/100</span></div>
     <div class="meter"><div style="width:${incident.risk_score}%"></div></div>
     <p><strong>${Math.round(incident.confidence * 100)}%</strong> campaign confidence</p>
+    <p class="muted">Completeness ${Math.round(incident.chain_completeness * 100)}% · entity consistency ${Math.round(incident.entity_consistency_score * 100)}%</p>
     <p class="muted">${incident.evidence_count} supporting events · status: ${incident.status}</p>
   `;
 
@@ -128,7 +136,16 @@ async function load(path) {
   render(data);
 }
 
-document.getElementById("attackBtn").onclick = () => load("/api/demo/attack");
-document.getElementById("cleanBtn").onclick = () => load("/api/demo/clean");
+async function loadScenarios() {
+  const res = await fetch("/api/scenarios");
+  const data = await res.json();
+  scenarioSelect.innerHTML = data.scenarios.map(name => `<option value="${name}">${pretty(name)}</option>`).join("");
+  scenarioSelect.value = "full_attack";
+}
 
-load("/api/demo/attack");
+document.getElementById("attackBtn").onclick = () => load("/api/demo/full_attack");
+document.getElementById("cleanBtn").onclick = () => load("/api/demo/clean");
+document.getElementById("scenarioBtn").onclick = () => load(`/api/demo/${scenarioSelect.value}`);
+
+loadScenarios();
+load("/api/demo/full_attack");
