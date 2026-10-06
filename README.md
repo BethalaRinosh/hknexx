@@ -136,6 +136,16 @@ The UI can therefore answer **why** an incident was raised instead of presenting
 ## Phase 5 — Grounded ATT&CK intelligence
 ## Phase 6 — Temporal attack reconstruction
 ## Phase 7 — Grounded LLM investigator
+## Phase 8 — Public dataset validation
+
+The validation harness now accepts public security telemetry without storing the raw corpus in Git.
+
+Current public targets are ATLASv2 EDR and an OTRF Security Datasets Windows collection. Each source has a manifest entry, local artifact environment variable, source URL and expected evaluation mode.
+
+The harness reports record/normalization coverage and ATT&CK labels when supplied by the public source. It **fails closed** when the real artifact is missing; no synthetic fallback is treated as public-data validation.
+
+See `docs/PHASE8_SPEC.md` and `backend/data/public_dataset_manifest.json`.
+
 
 The project now has an optional LLM investigator that runs **after** deterministic incident validation and attack reconstruction.
 
