@@ -9,7 +9,7 @@ from urllib import error, request
 
 from .models import Incident, InvestigationClaim, InvestigationReport
 
-EVENT_REF = re.compile(r'\\[([A-Za-z0-9_.:-]+)\\]')
+EVENT_REF = re.compile(r'\[([A-Za-z0-9_.:-]+)\]')
 
 
 class InvestigatorConfigurationError(RuntimeError):
