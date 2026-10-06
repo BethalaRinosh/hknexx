@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, phase8-public-validation]
+    branches: [main, phase8-public-validation, phase8-apt29-ground-truth]
 
 jobs:
   phase8:
