@@ -101,6 +101,32 @@ def _find(cluster: list[SecurityEvent], predicate: Callable[[SecurityEvent], boo
     return next((e for e in cluster if predicate(e)), None)
 
 
+def _is_removable_exfil(event: SecurityEvent) -> bool:
+    if event.event_type != "file_copy":
+        return False
+    copied_bytes = int(event.metadata.get("bytes", 0) or 0)
+    if copied_bytes < 1_000_000_000:
+        return False
+
+    destination = str(event.metadata.get("destination", "")).lower()
+    action = str(event.action or "").lower()
+    return (
+        "usb" in destination
+        or "removable" in destination
+        or "usb" in action
+        or "removable" in action
+        or bool(event.metadata.get("removable_destination"))
+    )
+
+
+def _context_is_authorized(event: SecurityEvent) -> bool:
+    return bool(
+        event.metadata.get("approved_transfer")
+        or event.metadata.get("authorized_activity")
+        or event.metadata.get("sanctioned_usb")
+    )
+
+
 def _stage(
     name: str,
     technique: str | None,
@@ -216,11 +242,8 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             lambda e: e.event_type == "file_access" and bool(e.metadata.get("sensitive")),
         )
         usb = _find(cluster, lambda e: e.event_type == "usb_mount")
-        copy = _find(
-            cluster,
-            lambda e: e.event_type == "file_copy"
-            and int(e.metadata.get("bytes", 0) or 0) >= 1_000_000_000,
-        )
+        copy = _find(cluster, _is_removable_exfil)
+        authorized_context = sum(1 for e in cluster if _context_is_authorized(e))
 
         stage_events: dict[str, list[SecurityEvent]] = {
             REQUIRED_STAGES[0]: [e for e in (login, new_device) if e],
@@ -332,6 +355,13 @@ def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
             ),
             2,
         )
+
+        # Multiple explicit enterprise authorization signals can suppress a
+        # superficially attack-like workflow. This is intentionally conservative:
+        # one approval flag alone never suppresses an incident.
+        if authorized_context >= 2 and bool(copy):
+            watchlist += 1
+            continue
 
         if not temporal_ok or entity_score < 0.60 or confidence < 0.78:
             watchlist += 1
