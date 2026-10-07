@@ -166,10 +166,16 @@ def normalize_windows_events_xml(xml_text: str) -> list[SecurityEvent]:
 
 
 def normalize_windows_event_xml(xml_text: str, index: int = 0) -> SecurityEvent:
-    events = normalize_windows_events_xml(xml_text)
-    if index >= len(events):
-        raise ET.ParseError("Windows XML event index is out of range")
-    return events[index]
+    root = ET.fromstring(xml_text)
+    namespaces = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
+    if root.tag.endswith("Event"):
+        node = root
+    else:
+        nodes = root.findall(".//e:Event", namespaces)
+        if not nodes:
+            raise ET.ParseError("Windows XML contains no Event elements")
+        node = nodes[0]
+    return _normalize_windows_xml_node(node, index=index)
 
 
 def normalize_sysmon_event(raw: dict[str, Any], index: int = 0) -> SecurityEvent:
