@@ -233,7 +233,8 @@ def test_enrichment_derives_flags_without_overwriting_explicit_metadata():
     enriched = enrich_events(events)
 
     assert enriched[0].metadata["unusual_ip"] is True
-    assert enriched[0].metadata["new_device"] is True
+    assert enriched[0].metadata["new_device"] is False
+    assert enriched[1].metadata["new_device"] is True
     assert enriched[2].metadata["sensitive"] is True
     assert enriched[3].metadata["large_transfer"] is True
     assert enriched[3].metadata["removable_destination"] is True
