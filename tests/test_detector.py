@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from backend.detector import analyze
+# CI verification marker for Task 1
 from backend.models import SecurityEvent
 
 
