@@ -198,6 +198,18 @@ function renderResponse(actions) {
 function render(data) {
   currentAnalysis = data;
   simulateInvestigatorBtn.disabled = !data.incidents?.length;
+  const incident = data.incidents?.[0];
+  const resultTitle = document.getElementById("resultTitle");
+  const resultSummary = document.getElementById("resultSummary");
+  if (incident) {
+    resultTitle.textContent = incident.title || "Validated incident";
+    resultSummary.textContent = `${data.correlated_incidents || 0} validated incident(s) from ${data.total_events || 0} event(s). Review the timeline and evidence below.`;
+  } else {
+    resultTitle.textContent = data.total_events ? "No incident validated" : "Waiting for telemetry";
+    resultSummary.textContent = data.total_events
+      ? `${data.total_events} event(s) analyzed. No complete attack chain met the validation contract.`
+      : "Run a demo, choose a scenario, or upload a log to begin.";
+  }
   stats.innerHTML = [
     stat("Events processed", data.total_events),
     stat("Strong signals", data.suspicious_events),
@@ -206,7 +218,6 @@ function render(data) {
   ].join("");
 
   renderHypotheses(data.campaign_hypotheses || []);
-  const incident = data.incidents?.[0];
 
   if (!incident) {
     incidentBanner.innerHTML = `
@@ -366,7 +377,15 @@ function startLiveSimulation() {
 
   liveSocket.onopen = () => setLiveStatus("STREAMING");
   liveSocket.onmessage = (message) => {
-    const payload = JSON.parse(message.data);
+    let payload;
+    try {
+      payload = JSON.parse(message.data);
+    } catch {
+      setLiveStatus("ERROR", "danger");
+      liveStream.innerHTML = '<div class="banner-danger"><b>STREAM ERROR</b><span>The server returned an invalid stream message.</span></div>';
+      stopLiveSimulation();
+      return;
+    }
     if (payload.type === "start") {
       setLiveStatus("STREAMING");
       return;
