@@ -205,7 +205,7 @@ function render(data) {
       <div class="dot ${i === 0 ? "first" : ""}"></div>
       <div>
         <div class="time">${new Date(e.timestamp).toLocaleTimeString()}</div>
-        <strong>${pretty(e.event_type)}</strong>
+        <strong>${esc(pretty(e.event_type))}</strong>
         <div class="muted">${esc(e.event_id)} · ${esc(e.source)}</div>
         <div class="event-meta">${[e.user, e.device, e.src_ip, e.application, e.resource].filter(Boolean).map(esc).join(" · ")}</div>
       </div>

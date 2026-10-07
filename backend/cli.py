@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Callable
 
@@ -162,7 +163,10 @@ def parse_file(
     if format_name == "windows":
         text = source.read_text(encoding="utf-8")
         if text.lstrip().startswith("<"):
-            return [normalize_windows_event_xml(text)]
+            try:
+                return [normalize_windows_event_xml(text)]
+            except ET.ParseError as exc:
+                raise PipelineInputError(f"invalid Windows XML in {source}: {exc}") from exc
         records = _records_from_json(source)
         return [normalize_windows_event(item, index=i) for i, item in enumerate(records)]
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -12,25 +13,26 @@ ROOT = Path(__file__).resolve().parent.parent
 RULES_PATH = ROOT / "config" / "rules.yml"
 
 
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def _load_rules(config: str | Path | dict[str, Any] | None = None) -> dict[str, Any]:
+    with RULES_PATH.open("r", encoding="utf-8") as handle:
+        defaults = yaml.safe_load(handle) or {}
     if config is None:
-        path = RULES_PATH
-        with path.open("r", encoding="utf-8") as handle:
-            return yaml.safe_load(handle) or {}
+        return defaults
     if isinstance(config, dict):
-        return config
+        return _deep_merge(defaults, config)
     with Path(config).open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
-
-
-def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
-    if not value:
-        return False
-    try:
-        address = ipaddress.ip_address(value)
-    except ValueError:
-        return False
-    return any(address in ipaddress.ip_network(item) for item in ranges)
+        override = yaml.safe_load(handle) or {}
+    return _deep_merge(defaults, override)
 
 
 def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
@@ -59,13 +61,8 @@ def enrich_events(
 
     device_rule = rules.get("new_device", {})
     enrollment_types = set(device_rule.get("event_types", []))
-    device_enrollments = {
-        (event.user, event.device)
-        for event in ordered
-        if event.event_type in enrollment_types and event.user and event.device
-    }
-
     seen_ips: dict[str, set[str]] = {}
+    enrolled_devices: set[tuple[str, str]] = set()
     for event in ordered:
         metadata = dict(event.metadata)
         user = str(event.user or "")
@@ -85,10 +82,12 @@ def enrich_events(
             seen_ips.setdefault(user, set()).add(event.src_ip)
 
         if device_rule.get("enabled", True) and "new_device" not in metadata:
-            metadata["new_device"] = (
-                (event.user, event.device) in device_enrollments
-                or event.event_type in enrollment_types
-            )
+            device_key = (event.user, event.device)
+            metadata["new_device"] = event.event_type in enrollment_types
+            if device_key in enrolled_devices:
+                metadata["new_device"] = True
+            if event.event_type in enrollment_types and event.user and event.device:
+                enrolled_devices.add(device_key)
 
         sensitive_rule = rules.get("sensitive_resource", {})
         if sensitive_rule.get("enabled", True) and "sensitive" not in metadata:

@@ -102,3 +102,28 @@ def test_upload_endpoint_uses_file_pipeline(tmp_path):
     assert response.status_code == 200
     body = response.json()
     assert body["total_events"] == 1
+
+
+def test_cli_malformed_windows_xml_fails_as_input_error(tmp_path):
+    source = tmp_path / "events.xml"
+    source.write_text("<Event><System>", encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "backend.cli",
+            "analyze",
+            str(source),
+            "--out",
+            str(tmp_path / "out"),
+            "--format",
+            "windows",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "invalid Windows XML" in result.stderr

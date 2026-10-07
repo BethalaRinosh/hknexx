@@ -45,6 +45,8 @@ Ollama and other OpenAI-compatible local servers can therefore be used without c
 
 There is **no synthetic fallback**. Missing provider configuration fails closed.
 
+For offline-safe operation, set `LLM_OFFLINE=1`. In that mode the investigator rejects provider use before any network request. When a provider is enabled, `LLM_BASE_URL` must use HTTP or HTTPS, and `LLM_MAX_RESPONSE_BYTES` bounds the provider response body (default 1 MiB). These controls are enforced by the application, not by the model.
+
 ## LLM permissions
 
 The investigator is read-only. It has no tools, no shell, no arbitrary network actions and no authority to change incidents.
