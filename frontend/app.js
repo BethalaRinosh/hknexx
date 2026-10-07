@@ -18,6 +18,10 @@ const liveBtn = document.getElementById("liveBtn");
 const liveStatus = document.getElementById("liveStatus");
 const liveStream = document.getElementById("liveStream");
 let liveSocket = null;
+let currentAnalysis = null;
+const simulateInvestigatorBtn = document.getElementById("simulateInvestigatorBtn");
+const investigatorStatus = document.getElementById("investigatorStatus");
+const investigatorOutput = document.getElementById("investigatorOutput");
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"]/g, c => ({
@@ -161,6 +165,8 @@ function renderResponse(actions) {
 }
 
 function render(data) {
+  currentAnalysis = data;
+  simulateInvestigatorBtn.disabled = !data.incidents?.length;
   stats.innerHTML = [
     stat("Events processed", data.total_events),
     stat("Strong signals", data.suspicious_events),
@@ -235,6 +241,50 @@ function render(data) {
   renderReconstruction(incident.reconstruction);
   renderAttackIntel(incident.attack_techniques);
   renderResponse(incident.recommended_actions);
+}
+
+function renderInvestigator(report) {
+  investigatorOutput.innerHTML = `
+    <div class="investigator-summary">${esc(report.summary)}</div>
+    <div class="evidence-title">GROUNDED CLAIMS</div>
+    ${(report.claims || []).map(claim => `
+      <div class="investigator-claim">
+        <div><b>${esc(claim.claim_type.toUpperCase())}</b> · ${pct(claim.confidence)}</div>
+        <p>${esc(claim.claim)}</p>
+        <div class="chip-row">${(claim.evidence_event_ids || []).map(esc).map(id => `<span class="evidence-chip">${id}</span>`).join("")}</div>
+      </div>
+    `).join("")}
+    <div class="evidence-title">UNANSWERED QUESTIONS</div>
+    ${(report.unanswered_questions || []).map(q => `<div class="muted">• ${esc(q)}</div>`).join("")}
+  `;
+}
+
+async function runSimulatedInvestigator() {
+  if (!currentAnalysis?.incidents?.length) return;
+  const incident = currentAnalysis.incidents[0];
+  investigatorStatus.textContent = "SIMULATING";
+  investigatorStatus.className = "pill";
+  investigatorOutput.innerHTML = '<div class="empty">Building a grounded analyst report from validated evidence…</div>';
+  simulateInvestigatorBtn.disabled = true;
+  await new Promise(resolve => setTimeout(resolve, 900));
+  try {
+    const res = await fetch("/api/investigate/simulated", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({events: incident.timeline, incident_id: incident.incident_id})
+    });
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+    const report = await res.json();
+    renderInvestigator(report);
+    investigatorStatus.textContent = "SIMULATION";
+    investigatorStatus.className = "pill safe";
+  } catch (error) {
+    investigatorStatus.textContent = "ERROR";
+    investigatorStatus.className = "pill danger";
+    investigatorOutput.innerHTML = `<div class="banner-danger"><b>INVESTIGATOR ERROR</b><span>${esc(error.message)}</span></div>`;
+  } finally {
+    simulateInvestigatorBtn.disabled = !currentAnalysis?.incidents?.length;
+  }
 }
 
 function setLiveStatus(label, tone = "") {
@@ -363,6 +413,7 @@ async function loadScenarios() {
 
 document.getElementById("attackBtn").onclick = () => load("/api/demo/full_attack");
 liveBtn.onclick = () => liveSocket ? stopLiveSimulation() : startLiveSimulation();
+simulateInvestigatorBtn.onclick = runSimulatedInvestigator;
 document.getElementById("cleanBtn").onclick = () => load("/api/demo/clean");
 document.getElementById("scenarioBtn").onclick = () => load(`/api/demo/${encodeURIComponent(scenarioSelect.value)}`);
 
