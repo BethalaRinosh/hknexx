@@ -55,11 +55,17 @@ def enrich_events(
     """Derive detector signals from normalized events without overwriting explicit flags."""
     rules = _load_rules(config).get("enrichment", {})
     result: list[SecurityEvent] = []
-
     ordered = sorted(events, key=lambda event: event.timestamp)
-    seen_ips: dict[str, set[str]] = {}
-    seen_devices: set[tuple[str, str]] = set()
 
+    device_rule = rules.get("new_device", {})
+    enrollment_types = set(device_rule.get("event_types", []))
+    device_enrollments = {
+        (event.user, event.device)
+        for event in ordered
+        if event.event_type in enrollment_types and event.user and event.device
+    }
+
+    seen_ips: dict[str, set[str]] = {}
     for event in ordered:
         metadata = dict(event.metadata)
         user = str(event.user or "")
@@ -70,16 +76,19 @@ def enrich_events(
         public_ip_rule = rules.get("suspicious_public_ip", {})
         if public_ip_rule.get("enabled", True) and event.event_type == "login" and "unusual_ip" not in metadata:
             previous_ips = seen_ips.get(user, set())
-            metadata["unusual_ip"] = bool(event.src_ip and event.src_ip not in previous_ips and not _is_private_ip(event.src_ip, public_ip_rule.get("private_ranges", [])))
+            metadata["unusual_ip"] = bool(
+                event.src_ip
+                and event.src_ip not in previous_ips
+                and not _is_private_ip(event.src_ip, public_ip_rule.get("private_ranges", []))
+            )
         if event.src_ip and user:
             seen_ips.setdefault(user, set()).add(event.src_ip)
 
-        device_rule = rules.get("new_device", {})
         if device_rule.get("enabled", True) and "new_device" not in metadata:
-            key = (user, str(event.device or ""))
-            metadata["new_device"] = bool(user and event.device and key not in seen_devices)
-        if user and event.device:
-            seen_devices.add((user, str(event.device)))
+            metadata["new_device"] = (
+                (event.user, event.device) in device_enrollments
+                or event.event_type in enrollment_types
+            )
 
         sensitive_rule = rules.get("sensitive_resource", {})
         if sensitive_rule.get("enabled", True) and "sensitive" not in metadata:
@@ -96,14 +105,13 @@ def enrich_events(
             )
 
         removable_rule = rules.get("removable_destination", {})
-        if removable_rule.get("enabled", True):
-            if "removable_destination" not in metadata:
-                metadata["removable_destination"] = (
-                    bool(metadata.get("removable"))
-                    or _contains_token(destination, removable_rule.get("tokens", []))
-                    or _contains_token(action, removable_rule.get("tokens", []))
-                    or _contains_token(resource, removable_rule.get("tokens", []))
-                )
+        if removable_rule.get("enabled", True) and "removable_destination" not in metadata:
+            metadata["removable_destination"] = (
+                bool(metadata.get("removable"))
+                or _contains_token(destination, removable_rule.get("tokens", []))
+                or _contains_token(action, removable_rule.get("tokens", []))
+                or _contains_token(resource, removable_rule.get("tokens", []))
+            )
 
         result.append(event.model_copy(update={"metadata": metadata}))
 
