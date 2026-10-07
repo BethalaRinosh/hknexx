@@ -33,16 +33,6 @@ def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
     return any(address in ipaddress.ip_network(item) for item in ranges)
 
 
-def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
-    if not value:
-        return False
-    try:
-        address = ipaddress.ip_address(value)
-    except ValueError:
-        return False
-    return any(address in ipaddress.ip_network(item) for item in ranges)
-
-
 def _contains_token(value: Any, tokens: list[str]) -> bool:
     text = str(value or "").lower()
     return any(token.lower() in text for token in tokens)
@@ -59,13 +49,8 @@ def enrich_events(
 
     device_rule = rules.get("new_device", {})
     enrollment_types = set(device_rule.get("event_types", []))
-    device_enrollments = {
-        (event.user, event.device)
-        for event in ordered
-        if event.event_type in enrollment_types and event.user and event.device
-    }
-
     seen_ips: dict[str, set[str]] = {}
+    enrolled_devices: set[tuple[str, str]] = set()
     for event in ordered:
         metadata = dict(event.metadata)
         user = str(event.user or "")
@@ -85,10 +70,12 @@ def enrich_events(
             seen_ips.setdefault(user, set()).add(event.src_ip)
 
         if device_rule.get("enabled", True) and "new_device" not in metadata:
-            metadata["new_device"] = (
-                (event.user, event.device) in device_enrollments
-                or event.event_type in enrollment_types
-            )
+            device_key = (event.user, event.device)
+            metadata["new_device"] = event.event_type in enrollment_types
+            if device_key in enrolled_devices:
+                metadata["new_device"] = True
+            if event.event_type in enrollment_types and event.user and event.device:
+                enrolled_devices.add(device_key)
 
         sensitive_rule = rules.get("sensitive_resource", {})
         if sensitive_rule.get("enabled", True) and "sensitive" not in metadata:
