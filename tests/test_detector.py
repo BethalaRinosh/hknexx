@@ -238,3 +238,36 @@ def test_enrichment_derives_flags_without_overwriting_explicit_metadata():
     assert enriched[3].metadata["large_transfer"] is True
     assert enriched[3].metadata["removable_destination"] is True
     assert enriched[3].metadata["unusual_ip"] is False
+
+
+def test_concurrent_validated_campaigns_receive_distinct_incident_ids():
+    events = [
+        SecurityEvent(event_id="C1", timestamp="2026-10-07T09:00:00Z", event_type="login",
+                      user="same-user", device="DEV-A", src_ip="198.51.100.10",
+                      application="SSO", source="auth", metadata={"unusual_ip": True, "new_device": True}),
+        SecurityEvent(event_id="C2", timestamp="2026-10-07T09:02:00Z", event_type="file_access",
+                      user="same-user", device="DEV-A", src_ip="198.51.100.10",
+                      application="Files", resource="/finance/a.xlsx", action="read",
+                      source="files", severity="high", metadata={"sensitive": True}),
+        SecurityEvent(event_id="C3", timestamp="2026-10-07T09:04:00Z", event_type="file_copy",
+                      user="same-user", device="DEV-A", src_ip="198.51.100.10",
+                      application="Copy", resource="/finance/a.xlsx", action="copy_to_usb",
+                      source="endpoint", severity="critical",
+                      metadata={"bytes": 2_000_000_000, "destination": "USB-A"}),
+        SecurityEvent(event_id="D1", timestamp="2026-10-07T09:10:00Z", event_type="login",
+                      user="same-user", device="DEV-B", src_ip="198.51.100.11",
+                      application="SSO", source="auth", metadata={"unusual_ip": True, "new_device": True}),
+        SecurityEvent(event_id="D2", timestamp="2026-10-07T09:12:00Z", event_type="file_access",
+                      user="same-user", device="DEV-B", src_ip="198.51.100.11",
+                      application="Files", resource="/hr/b.xlsx", action="read",
+                      source="files", severity="high", metadata={"sensitive": True}),
+        SecurityEvent(event_id="D3", timestamp="2026-10-07T09:14:00Z", event_type="file_copy",
+                      user="same-user", device="DEV-B", src_ip="198.51.100.11",
+                      application="Copy", resource="/hr/b.xlsx", action="copy_to_usb",
+                      source="endpoint", severity="critical",
+                      metadata={"bytes": 2_000_000_000, "destination": "USB-B"}),
+    ]
+    result = analyze(events)
+    assert result.correlated_incidents == 2
+    incident_ids = [incident.incident_id for incident in result.incidents]
+    assert len(set(incident_ids)) == 2
