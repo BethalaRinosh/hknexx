@@ -80,7 +80,7 @@ This remains a project-specific proxy evaluation. CERT raw telemetry does not di
 
 ### Audit hardening
 
-The end-to-end pipeline now preserves configuration semantics and evidence chronology across ingestion and detection. Nested stage overrides retain unspecified defaults, explicit enrichment flags are honored by the detector, malformed transfer metadata fails closed, configured transfer thresholds are authoritative, device-enrollment signals are not backdated, and untrusted event types are escaped before dashboard rendering.
+The end-to-end pipeline now preserves configuration semantics and evidence chronology across ingestion and detection. Nested stage overrides retain unspecified defaults, explicit enrichment flags are honored by the detector, malformed transfer metadata fails closed, configured transfer thresholds are authoritative, device-enrollment signals are not backdated, untrusted event types are escaped before dashboard rendering, and Windows XML exports may contain multiple events.
 
 ### Config-driven stages and templates
 
