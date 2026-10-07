@@ -31,8 +31,8 @@ def test_realtime_simulation_streams_events_and_final_incident():
     ]
 
     progress = [item["analysis"]["correlated_incidents"] for item in event_messages]
-    assert progress[-1] == 1
-    assert all(value == 0 for value in progress[:-1])
+    assert progress[:3] == [0, 0, 0]
+    assert progress[-2:] == [1, 1]
 
     complete = messages[-1]
     assert complete["type"] == "complete"
