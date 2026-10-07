@@ -127,3 +127,30 @@ def test_cli_malformed_windows_xml_fails_as_input_error(tmp_path):
 
     assert result.returncode == 2
     assert "invalid Windows XML" in result.stderr
+
+
+def test_upload_endpoint_rejects_unsupported_extension():
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/analyze/upload",
+        files={"file": ("events.exe", "not a supported telemetry file", "application/octet-stream")},
+    )
+
+    assert response.status_code == 415
+    assert "unsupported upload extension" in response.json()["detail"]
+
+
+def test_upload_endpoint_enforces_configured_size_limit(monkeypatch):
+    from backend.main import app
+
+    monkeypatch.setenv("HNX_UPLOAD_MAX_BYTES", "16")
+    client = TestClient(app)
+    response = client.post(
+        "/api/analyze/upload",
+        files={"file": ("events.json", "12345678901234567", "application/json")},
+    )
+
+    assert response.status_code == 413
+    assert "exceeds the 16 byte limit" in response.json()["detail"]

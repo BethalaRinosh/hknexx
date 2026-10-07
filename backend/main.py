@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 from pathlib import Path
 from math import isfinite
@@ -148,6 +149,21 @@ def analyze_logs(events: list[SecurityEvent]) -> AnalysisResponse:
     return analyze(events)
 
 
+UPLOAD_MAX_BYTES_DEFAULT = 10 * 1024 * 1024
+ALLOWED_UPLOAD_SUFFIXES = {".json", ".jsonl", ".ndjson", ".csv", ".xml"}
+
+
+def _upload_max_bytes() -> int:
+    raw = os.getenv("HNX_UPLOAD_MAX_BYTES", str(UPLOAD_MAX_BYTES_DEFAULT)).strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="invalid HNX_UPLOAD_MAX_BYTES configuration") from exc
+    if value <= 0:
+        raise HTTPException(status_code=500, detail="HNX_UPLOAD_MAX_BYTES must be positive")
+    return value
+
+
 @app.post("/api/analyze/upload", response_model=AnalysisResponse)
 async def analyze_upload(
     file: UploadFile = File(...),
@@ -155,11 +171,32 @@ async def analyze_upload(
 ) -> AnalysisResponse:
     if not file.filename:
         raise HTTPException(status_code=400, detail="file must have a filename")
-    suffix = Path(file.filename).suffix
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
-        handle.write(await file.read())
-        temp_path = Path(handle.name)
+
+    filename = Path(file.filename).name
+    if len(filename) > 255:
+        raise HTTPException(status_code=400, detail="filename is too long")
+
+    suffix = Path(filename).suffix.lower()
+    if format_name == "auto" and suffix not in ALLOWED_UPLOAD_SUFFIXES:
+        allowed = ", ".join(sorted(ALLOWED_UPLOAD_SUFFIXES))
+        raise HTTPException(status_code=415, detail=f"unsupported upload extension; allowed: {allowed}")
+
+    max_bytes = _upload_max_bytes()
+    temp_path: Path | None = None
+    total_bytes = 0
+
     try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
+            temp_path = Path(handle.name)
+            while chunk := await file.read(1024 * 1024):
+                total_bytes += len(chunk)
+                if total_bytes > max_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"uploaded file exceeds the {max_bytes} byte limit",
+                    )
+                handle.write(chunk)
+
         events = parse_file(temp_path, format_name=format_name)
         if not events:
             raise HTTPException(status_code=400, detail="file contains no events")
@@ -167,7 +204,8 @@ async def analyze_upload(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
-        temp_path.unlink(missing_ok=True)
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 @app.post("/api/analyze/raw", response_model=AnalysisResponse)
