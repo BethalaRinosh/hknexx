@@ -1,92 +1,54 @@
-# Phase 8 — Raw CERT r4.2 Gate
+# Phase 8 — Raw CERT r4.2 Gate Result
 
 ## Outcome
 
-**Raw-data acquisition and benchmark execution: PASS.**
+**PASS — actual raw CERT r4.2 files were downloaded, verified, processed, benchmarked, and archived by CI.**
 
-The gate was executed on the real CERT r4.2 source layout: logon.csv, device.csv, file.csv, and the official CMU/CERT insiders.csv answer-key data.
+The canonical provenance is the CMU/SEI CERT Insider Threat Test Dataset r4.2 (DOI 10.1184/R1/12841247.v1). The execution mirror was the public Kaggle dataset `andrihjonior/cert-insider-threat-dataset-r4-2`.
 
-The CMU Software Engineering Institute describes the CERT Insider Threat Test Dataset as synthetic background plus malicious-actor data, and states that answers.tar.bz2 contains the malicious scenarios and the synthetic users involved. See: https://www.sei.cmu.edu/library/insider-threat-test-dataset/
+## Raw corpus
 
-The raw log CSVs were acquired from a public mirror of the CERT r4.2 files because the historical CMU FTP hostname was not resolvable from the GitHub Actions runner. The answer key was downloaded from the CMU/KiltHub artifact endpoint.
-
-## Raw data verified
-
-| File | Rows | Approx. size |
+| File | Rows | Bytes |
 |---|---:|---:|
-| logon.csv | 854,859 | 58.5 MB |
-| device.csv | 405,380 | 29.0 MB |
-| file.csv | 445,581 | 193.1 MB |
-| insiders.csv | 190 data rows | 13.8 KB |
+| logon.csv | 854,859 | 58,514,706 |
+| device.csv | 405,380 | 28,982,749 |
+| file.csv | 445,581 | 193,055,265 |
+| insiders.csv | 191 data rows | 13,792 |
 
-The answer key contains 70 r4.2 malicious scenario rows.
+The r4.2 answer file contains 70 malicious scenario rows for dataset 4.2.
 
-## Benchmark contract
-
-The benchmark intentionally uses a project-specific compatibility proxy, not a claim of full CERT attack detection.
-
-For each malicious scenario window:
-
-1. Identity = a Logon event for the ground-truth user.
-2. Sensitive-data proxy = file activity after the login.
-3. Exfiltration proxy = file activity occurring while the same user/PC has an active removable-device Connect event.
-4. Ordered chain = all three in chronological order.
-
-This mirrors the project's MVP chain semantics. It does not label every CERT file event as sensitive or every device event as malicious.
-
-## Final result
+## Measured benchmark
 
 | Metric | Result |
 |---|---:|
-| Malicious scenarios evaluated | 70 |
-| Project-compatible malicious scenarios | 3 / 70 |
-| Compatibility rate | **4.29%** |
-| Identity-stage proxy recall | **100.00%** |
-| Sensitive-stage proxy recall | **5.71%** |
-| Exfil-stage proxy recall | **4.29%** |
-| Ordered-chain proxy recall | **4.29%** |
-| Ordered-chain recall within compatible subset | **100.00%** |
-| Benign windows sampled | 300 |
+| Malicious scenarios | 70 |
+| Project-compatible scenarios | 3 |
+| Compatibility rate | 4.29% |
+| Identity-stage proxy recall | 100.00% |
+| Sensitive-stage proxy recall | 5.71% |
+| Exfil-stage proxy recall | 4.29% |
+| Ordered-chain proxy recall | 4.29% |
+| Compatible ordered-chain recall | 100.00% |
+| Benign sampled windows | 300 |
 | Benign proxy-chain windows | 7 |
-| Benign proxy-chain rate | **2.33%** |
+| Benign proxy-chain rate | 2.33% |
 
-### Correct interpretation
+## Correct interpretation
 
-The most important number is **4.29% compatibility coverage**, not 4.29% detector accuracy.
+This is **not** a claim that our detector has 4.29% CERT recall.
 
-Only 3 of the 70 malicious CERT scenario windows contain the exact semantic pattern represented by this MVP benchmark: identity anomaly → file activity → removable-media transfer context.
+CERT r4.2 does not directly provide the same `src_ip`, `new_device`, and sensitive-resource semantics used by the MVP detector. The benchmark therefore asks a narrower, defensible question:
 
-Therefore:
+> How many real CERT malicious scenario windows can be represented by our current identity → file activity → removable-media evidence contract?
 
-- the raw dataset gate is complete;
-- the parser/integrity path is exercised on real data;
-- the project-specific chain works on all 3 compatible malicious cases;
-- the benchmark exposes that the current MVP chain does not represent most CERT malicious scenarios;
-- the 2.33% benign proxy-chain rate shows that the proxy itself is not a standalone maliciousness label.
+Answer: **3/70 (4.29%)**.
 
-This is a coverage limitation, not a justification to inflate the score.
+All three compatible windows satisfy the ordered proxy chain.
 
-## Validation performed
+## CI evidence
 
-The successful GitHub Actions raw gate completed all of:
+Workflow run: **37574902964**  
+Artifact: **phase8-cert-raw-result**  
+Artifact ID: **11462541036**
 
-- raw source acquisition;
-- semantic CSV schema verification;
-- official answer-key acquisition;
-- raw layout verification;
-- raw benchmark;
-- raw benchmark unit tests;
-- complete repository regression suite;
-- benchmark result artifact upload.
-
-Raw benchmark workflow run: 37516637334.
-
-## Boundary
-
-No raw CERT files are committed to Git.
-
-The checked-in result is a reproducible benchmark specification and result summary. The workflow re-acquires the source artifacts when explicitly dispatched.
-
-## Next engineering implication
-
-The benchmark proves that the MVP is correctly exercised on compatible CERT chains, but it also identifies the next research gap: expand the normalized evidence model and detection stages so that additional CERT behaviors—especially non-removable-media collection/exfiltration patterns—can be represented without weakening the evidence-first contract.
+The machine-readable result is in `docs/results/phase8_cert_raw_result.json`.
