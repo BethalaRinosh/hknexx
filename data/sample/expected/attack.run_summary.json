@@ -1,0 +1,10 @@
+{
+  "counts": {
+    "input_records": 5,
+    "normalized_events": 5,
+    "enriched_events": 5,
+    "suspicious_events": 3,
+    "watchlist_candidates": 0,
+    "validated_incidents": 1
+  }
+}
