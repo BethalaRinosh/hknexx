@@ -27,9 +27,9 @@ REQUIRED_STAGES = ("identity", "sensitive_access", "exfiltration")
 RULES_PATH = Path(__file__).resolve().parent.parent / "config" / "rules.yml"
 
 DEFAULT_STAGE_CONFIG = {
-    "identity": {"name": "Initial Access / Identity Anomaly", "technique": "T1078", "confidence": {"with_login_and_device": 0.88, "without_device": 0.76}, "reason": stage_defs["identity"]["reason"], "evidence_reasons": {"login": stage_defs["identity"]["evidence_reasons"]["login"], "device": stage_defs["identity"]["evidence_reasons"]["device"]}},
-    "sensitive_access": {"name": "Sensitive Data Access", "technique": "T1005", "confidence": 0.90, "reason": stage_defs["sensitive_access"]["reason"], "evidence_reason": stage_defs["sensitive_access"]["evidence_reason"]},
-    "exfiltration": {"name": "Collection / Exfiltration", "technique": "T1052.001", "confidence": {"with_usb_and_copy": 0.96, "with_copy": 0.82, "usb_only": 0.60}, "reason": stage_defs["exfiltration"]["reason"], "evidence_reasons": {"usb": stage_defs["exfiltration"]["evidence_reasons"]["usb"], "copy": stage_defs["exfiltration"]["evidence_reasons"]["copy"]}},
+    "identity": {"name": "Initial Access / Identity Anomaly", "technique": "T1078", "confidence": {"with_login_and_device": 0.88, "without_device": 0.76}, "reason": stage_defs["identity"]["reason"], "evidence_reasons": {"login": "Authentication from an unusual IP.", "device": "Previously unseen device associated with the session."}},
+    "sensitive_access": {"name": "Sensitive Data Access", "technique": "T1005", "confidence": 0.90, "reason": stage_defs["sensitive_access"]["reason"], "evidence_reason": "Sensitive resource accessed after the identity anomaly."},
+    "exfiltration": {"name": "Collection / Exfiltration", "technique": "T1052.001", "confidence": {"with_usb_and_copy": 0.96, "with_copy": 0.82, "usb_only": 0.60}, "reason": stage_defs["exfiltration"]["reason"], "evidence_reasons": {"usb": "Removable media was mounted during the correlated session.", "copy": "Large-volume transfer occurred during the correlated session."}},
 }
 DEFAULT_INCIDENT_TEMPLATE = {"title": "Suspected multi-stage data exfiltration", "recommended_actions": ["Disable or step-up authenticate the affected account.", "Isolate the correlated device from the network.", "Preserve endpoint, file and removable-media telemetry.", "Investigate the accessed sensitive resources and transfer destination."]}
 
@@ -240,6 +240,7 @@ def _entity_consistency(events: list[SecurityEvent]) -> float:
 
 
 def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
+    detector_config = _load_detector_config(config)
     enriched = enrich_events(list(events), config=config)
     ordered = sorted(enriched, key=lambda e: e.timestamp)
     scored = [(event, _event_score(event)) for event in ordered]
@@ -302,9 +303,9 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                         EvidenceItem(
                             event_id=e.event_id,
                             reason=(
-                                "Authentication from an unusual IP."
+                                stage_defs["identity"]["evidence_reasons"]["login"]
                                 if e.event_type == "login"
-                                else "Previously unseen device associated with the session."
+                                else stage_defs["identity"]["evidence_reasons"]["device"]
                             ),
                         )
                         for e in stage_evidence
@@ -323,7 +324,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                     [
                         EvidenceItem(
                             event_id=sensitive.event_id,
-                            reason="Sensitive resource accessed after the identity anomaly.",
+                            reason=stage_defs["sensitive_access"]["evidence_reason"],
                         )
                     ],
                     _entity_keys(sensitive),
@@ -343,9 +344,9 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                         EvidenceItem(
                             event_id=e.event_id,
                             reason=(
-                                "Removable media was mounted during the correlated session."
+                                stage_defs["exfiltration"]["evidence_reasons"]["usb"]
                                 if e.event_type == "usb_mount"
-                                else "Large-volume transfer occurred during the correlated session."
+                                else stage_defs["exfiltration"]["evidence_reasons"]["copy"]
                             ),
                         )
                         for e in exfil_events
