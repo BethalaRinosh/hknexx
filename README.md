@@ -56,6 +56,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 10 | Upload resource and input hardening | Complete |
 | Task 11 | API route-order hardening and endpoint regression coverage | Complete |
 | Task 12 | Windows XML encoding compatibility | Complete |
+| Task 13 | API event-count resource limits | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -101,6 +102,12 @@ The live simulation endpoint is:
 `WS /ws/simulate/{scenario}?delay=<seconds>`
 
 For example, the dashboard's **Start Live Simulation** control runs the selected scenario with a visible 0.9-second event cadence. The normal file upload and batch APIs remain available.
+
+### API event limits
+
+JSON and multipart analysis endpoints enforce a default maximum of **5,000 events per request** to keep deterministic correlation and reconstruction bounded. Set `HNX_MAX_API_EVENTS` to a controlled deployment value when a different ceiling is appropriate. Requests over the configured limit return HTTP 413 before detection work begins.
+
+The local CLI is intentionally separate from this HTTP API limit because offline batch processing has different resource controls.
 
 ### Upload safety
 

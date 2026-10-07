@@ -193,3 +193,58 @@ def test_cli_windows_xml_accepts_utf16_export(tmp_path):
     assert result.returncode == 0, result.stderr
     summary = json.loads((tmp_path / "out" / "run_summary.json").read_text(encoding="utf-8"))
     assert summary["counts"]["normalized_events"] == 1
+
+
+def test_analyze_endpoint_enforces_event_limit(monkeypatch):
+    from backend.main import app
+
+    monkeypatch.setenv("HNX_MAX_API_EVENTS", "1")
+    client = TestClient(app)
+    payload = [
+        {
+            "event_id": "LIMIT-1",
+            "timestamp": "2026-10-07T09:00:00Z",
+            "event_type": "login",
+            "source": "test",
+        },
+        {
+            "event_id": "LIMIT-2",
+            "timestamp": "2026-10-07T09:01:00Z",
+            "event_type": "login",
+            "source": "test",
+        },
+    ]
+
+    response = client.post("/api/analyze", json=payload)
+
+    assert response.status_code == 413
+    assert "at most 1 events" in response.json()["detail"]
+
+
+def test_upload_endpoint_enforces_event_limit_after_parsing(monkeypatch):
+    from backend.main import app
+
+    monkeypatch.setenv("HNX_MAX_API_EVENTS", "1")
+    client = TestClient(app)
+    payload = json.dumps([
+        {
+            "id": "LIMIT-UP-1",
+            "timestamp": "2026-10-07T09:00:00Z",
+            "type": "login",
+            "log_source": "test",
+        },
+        {
+            "id": "LIMIT-UP-2",
+            "timestamp": "2026-10-07T09:01:00Z",
+            "type": "login",
+            "log_source": "test",
+        },
+    ])
+
+    response = client.post(
+        "/api/analyze/upload",
+        files={"file": ("events.json", payload, "application/json")},
+    )
+
+    assert response.status_code == 413
+    assert "at most 1 events" in response.json()["detail"]

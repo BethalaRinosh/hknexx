@@ -146,11 +146,35 @@ async def simulate_scenario(websocket: WebSocket, scenario: str) -> None:
 def analyze_logs(events: list[SecurityEvent]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/analyze")
     return analyze(events)
 
 
 UPLOAD_MAX_BYTES_DEFAULT = 10 * 1024 * 1024
 ALLOWED_UPLOAD_SUFFIXES = {".json", ".jsonl", ".ndjson", ".csv", ".xml"}
+MAX_API_EVENTS_DEFAULT = 5000
+
+
+def _api_event_limit() -> int:
+    raw = os.getenv("HNX_MAX_API_EVENTS", str(MAX_API_EVENTS_DEFAULT)).strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail="invalid HNX_MAX_API_EVENTS configuration") from exc
+    if value <= 0:
+        raise HTTPException(status_code=500, detail="HNX_MAX_API_EVENTS must be positive")
+    return value
+
+
+def _enforce_event_limit(events: list[object], endpoint: str) -> None:
+    limit = _api_event_limit()
+    if len(events) > limit:
+        raise HTTPException(
+            status_code=413,
+            detail=f"{endpoint} accepts at most {limit} events per request",
+        )
+
+
 
 
 def _upload_max_bytes() -> int:
@@ -200,6 +224,7 @@ async def analyze_upload(
         events = parse_file(temp_path, format_name=format_name)
         if not events:
             raise HTTPException(status_code=400, detail="file contains no events")
+        _enforce_event_limit(events, "/api/analyze/upload")
         return analyze(events)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -212,6 +237,7 @@ async def analyze_upload(
 def analyze_raw_logs(events: list[dict]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/analyze/raw")
     return analyze(normalize_events(events))
 
 
@@ -219,6 +245,7 @@ def analyze_raw_logs(events: list[dict]) -> AnalysisResponse:
 def analyze_windows(events: list[dict]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/analyze/windows")
     normalized = [normalize_windows_event(event, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
 
@@ -227,6 +254,7 @@ def analyze_windows(events: list[dict]) -> AnalysisResponse:
 def analyze_windows_xml(events: list[str]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/analyze/windows/xml")
     normalized = [normalize_windows_event_xml(event, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
 
@@ -235,6 +263,7 @@ def analyze_windows_xml(events: list[str]) -> AnalysisResponse:
 def analyze_sysmon(events: list[dict]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/analyze/sysmon")
     normalized = [normalize_sysmon_event(event, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
 
@@ -245,6 +274,7 @@ def analyze_zeek(payload: dict) -> AnalysisResponse:
     stream = str(payload.get("stream") or "conn")
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/analyze/zeek")
     normalized = [normalize_zeek_event(event, stream=stream, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
 
@@ -253,6 +283,7 @@ def analyze_zeek(payload: dict) -> AnalysisResponse:
 def investigate_incident(payload: InvestigationRequest) -> InvestigationReport:
     if not payload.events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(payload.events, "/api/investigate")
 
     analysis = analyze(payload.events)
     if not analysis.incidents:
@@ -282,6 +313,7 @@ def investigate_incident(payload: InvestigationRequest) -> InvestigationReport:
 def reconstruct_attack(events: list[SecurityEvent]) -> dict:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(events, "/api/reconstruct")
     return reconstruct(events).model_dump(mode="json")
 
 
@@ -293,6 +325,7 @@ def analyze_behavior(payload: dict) -> BehaviorAnalysisResponse:
         raise HTTPException(status_code=400, detail="baseline must contain historical events")
     if not events:
         raise HTTPException(status_code=400, detail="events must contain events to score")
+    _enforce_event_limit(baseline + events, "/api/analyze/behavior")
 
     baseline_events = [SecurityEvent.model_validate(item) for item in baseline]
     current_events = [SecurityEvent.model_validate(item) for item in events]
