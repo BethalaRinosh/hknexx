@@ -81,14 +81,14 @@ This remains a project-specific proxy evaluation. CERT raw telemetry does not di
 
 ### Realtime telemetry simulation
 
-The dashboard now includes an explicit **simulation mode** that behaves like a live telemetry feed without pretending to collect from a host. It emits the repository scenario events one at a time over a FastAPI WebSocket, runs the existing detector against the accumulated stream after every event, and updates the dashboard incrementally.
+The dashboard now includes an explicit **simulation mode** that behaves like a live telemetry feed without pretending to collect from a host. It emits the repository scenario events one at a time over a FastAPI WebSocket, runs the existing enrichment and detector against the accumulated stream after every event, and updates the dashboard incrementally.
 
 This is intentionally a simulation boundary for the hackathon prototype:
 
 - no fabricated model inference is shown as real;
-- the simulator uses the same canonical SecurityEvent records as the normal pipeline;
+- the simulator uses the same canonical SecurityEvent records as the normal pipeline and feeds them through enrichment/detection;
 - the detector is invoked repeatedly as telemetry arrives;
-- a validated incident appears only when the accumulated evidence satisfies the deterministic chain;
+- a validated incident appears as soon as the accumulated evidence satisfies the deterministic chain, even if later telemetry adds corroborating detail;
 - the stream exposes start, event, complete, and error messages;
 - a future real collector can implement the same async event-stream contract without changing the detector.
 
