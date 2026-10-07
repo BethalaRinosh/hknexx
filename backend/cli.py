@@ -127,9 +127,9 @@ def detect_format(path: Path, payload: Any | None = None) -> str:
 
 def _read_windows_xml(path: Path) -> str:
     raw = path.read_bytes()
-    if raw.startswith((b"\\xff\\xfe", b"\\xfe\\xff")):
+    if raw.startswith((bytes((0xFF, 0xFE)), bytes((0xFE, 0xFF)))):
         return raw.decode("utf-16")
-    if raw.startswith(b"\\xef\\xbb\\xbf"):
+    if raw.startswith(bytes((0xEF, 0xBB, 0xBF))):
         return raw.decode("utf-8-sig")
     return raw.decode("utf-8")
 
