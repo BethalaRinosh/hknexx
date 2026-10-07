@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -39,6 +39,7 @@ class RawCERTCaseResult:
     stage_sensitive: bool
     stage_exfil: bool
     ordered_chain: bool
+    compatibility_class: str
     first_event_ids: tuple[str, ...] = ()
 
 
@@ -59,6 +60,8 @@ class RawCERTBenchmarkResult:
     benign_chain_rate: float
     status: str
     reason: str
+    scenario_results: tuple[RawCERTCaseResult, ...] = ()
+    compatibility_breakdown: dict[str, int] = field(default_factory=dict)
 
 
 def _norm(value: str | None) -> str:
@@ -192,6 +195,15 @@ def _case_chain(window: ScenarioWindow, events: list[CERTEvent]) -> RawCERTCaseR
         if event is not None
     )
 
+    if ordered:
+        compatibility_class = "compatible"
+    elif not stage_identity:
+        compatibility_class = "missing_identity"
+    elif not stage_sensitive:
+        compatibility_class = "missing_sensitive_access"
+    else:
+        compatibility_class = "missing_exfiltration"
+
     return RawCERTCaseResult(
         user=window.user,
         scenario=window.scenario,
@@ -199,6 +211,7 @@ def _case_chain(window: ScenarioWindow, events: list[CERTEvent]) -> RawCERTCaseR
         stage_sensitive=stage_sensitive,
         stage_exfil=stage_exfil,
         ordered_chain=ordered,
+        compatibility_class=compatibility_class,
         first_event_ids=evidence,
     )
 
@@ -278,6 +291,12 @@ def evaluate_raw_cert(
         round(ordered_hits / compatible_malicious, 4) if compatible_malicious else 0.0
     )
 
+    compatibility_breakdown: dict[str, int] = {}
+    for item in malicious_results:
+        compatibility_breakdown[item.compatibility_class] = (
+            compatibility_breakdown.get(item.compatibility_class, 0) + 1
+        )
+
     return RawCERTBenchmarkResult(
         malicious_scenarios=malicious_n,
         compatible_malicious_scenarios=compatible_malicious,
@@ -301,4 +320,6 @@ def evaluate_raw_cert(
             "compatible_ordered_chain_recall measures ordered-chain coverage within that compatible subset. "
             "The benign result is a sampled non-malicious-user window rate, not a census."
         ),
+        scenario_results=tuple(malicious_results),
+        compatibility_breakdown=compatibility_breakdown,
     )
