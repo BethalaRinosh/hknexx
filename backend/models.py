@@ -111,6 +111,34 @@ class EvaluationCase(BaseModel):
     reason: str
 
 
+
+class AdversarialCase(BaseModel):
+    scenario: str
+    ground_truth: Literal["malicious", "benign"]
+    expected: Disposition
+    actual: Disposition
+    passed: bool
+    incidents: int
+    watchlist_candidates: int
+    reason: str
+
+
+class AdversarialReport(BaseModel):
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    true_positives: int
+    false_positives: int
+    true_negatives: int
+    false_negatives: int
+    precision: float
+    recall: float
+    f1: float
+    false_positive_rate: float
+    false_negative_rate: float
+    cases: list[AdversarialCase]
+
+
 class Phase2Report(BaseModel):
     total_cases: int
     passed_cases: int
