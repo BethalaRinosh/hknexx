@@ -57,6 +57,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 11 | API route-order hardening and endpoint regression coverage | Complete |
 | Task 12 | Windows XML encoding compatibility | Complete |
 | Task 13 | API event-count resource limits | Complete |
+| Task 14 | LLM provider configuration hardening | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -184,7 +185,7 @@ The optional investigator runs **after** deterministic incident validation. Its 
 
 The investigator fails closed when no provider is configured and can be explicitly disabled with `LLM_OFFLINE=1`. Offline mode rejects the request before any network operation.
 
-When enabled, the provider endpoint must use HTTP or HTTPS. Provider response bodies are bounded by `LLM_MAX_RESPONSE_BYTES`, defaulting to 1 MiB, to prevent an unexpectedly large response from consuming unbounded memory.
+When enabled, the provider endpoint must use HTTP or HTTPS. `LLM_TIMEOUT` must be a finite value between 0 and 300 seconds. Provider response bodies are bounded by `LLM_MAX_RESPONSE_BYTES`, defaulting to 1 MiB, to prevent an unexpectedly large response from consuming unbounded memory.
 
 Example offline configuration:
 

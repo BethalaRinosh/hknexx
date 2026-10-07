@@ -11,6 +11,7 @@ from backend.investigator import (
     build_prompt,
     call_openai_compatible,
     validate_provider_response,
+    _timeout_seconds,
 )
 from backend.models import SecurityEvent
 
@@ -119,3 +120,15 @@ def test_missing_provider_configuration_fails_closed(monkeypatch):
     monkeypatch.delenv('LLM_MODEL', raising=False)
     with pytest.raises(InvestigatorConfigurationError, match='no synthetic fallback'):
         call_openai_compatible([])
+
+
+def test_invalid_llm_timeout_fails_as_configuration_error(monkeypatch):
+    monkeypatch.setenv("LLM_TIMEOUT", "not-a-number")
+    with pytest.raises(InvestigatorConfigurationError, match="LLM_TIMEOUT"):
+        _timeout_seconds()
+
+
+def test_llm_timeout_is_bounded(monkeypatch):
+    monkeypatch.setenv("LLM_TIMEOUT", "301")
+    with pytest.raises(InvestigatorConfigurationError, match="no more than 300"):
+        _timeout_seconds()

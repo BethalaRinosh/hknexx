@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from math import isfinite
 from urllib.parse import urlparse
 from dataclasses import dataclass
 from typing import Any
@@ -140,6 +141,17 @@ def _env_flag(name: str) -> bool:
     return os.getenv(name, '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
 
+def _timeout_seconds() -> float:
+    raw = os.getenv('LLM_TIMEOUT', '30').strip()
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise InvestigatorConfigurationError('LLM_TIMEOUT must be a positive number of seconds') from exc
+    if not isfinite(value) or value <= 0 or value > 300:
+        raise InvestigatorConfigurationError('LLM_TIMEOUT must be greater than 0 and no more than 300 seconds')
+    return value
+
+
 def _response_limit() -> int:
     raw = os.getenv('LLM_MAX_RESPONSE_BYTES', '1048576').strip()
     try:
@@ -180,7 +192,7 @@ def call_openai_compatible(messages: list[dict[str, str]]) -> tuple[str, str, st
         method='POST',
     )
     try:
-        with request.urlopen(req, timeout=float(os.getenv('LLM_TIMEOUT', '30'))) as response:
+        with request.urlopen(req, timeout=_timeout_seconds()) as response:
             raw_response = response.read(response_limit + 1)
             if len(raw_response) > response_limit:
                 raise InvestigatorProviderError(f'LLM provider response too large: exceeds {response_limit} bytes')
