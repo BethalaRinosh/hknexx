@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from urllib.parse import urlparse
 from dataclasses import dataclass
 from typing import Any
 from urllib import error, request
@@ -135,7 +136,25 @@ def _extract_content(payload: dict[str, Any]) -> str:
     raise InvestigatorProviderError('LLM response content was not text')
 
 
+def _env_flag(name: str) -> bool:
+    return os.getenv(name, '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def _response_limit() -> int:
+    raw = os.getenv('LLM_MAX_RESPONSE_BYTES', '1048576').strip()
+    try:
+        limit = int(raw)
+    except ValueError as exc:
+        raise InvestigatorConfigurationError('LLM_MAX_RESPONSE_BYTES must be a positive integer') from exc
+    if limit <= 0:
+        raise InvestigatorConfigurationError('LLM_MAX_RESPONSE_BYTES must be a positive integer')
+    return limit
+
+
 def call_openai_compatible(messages: list[dict[str, str]]) -> tuple[str, str, str]:
+    if _env_flag('LLM_OFFLINE'):
+        raise InvestigatorConfigurationError('LLM investigator is disabled in offline mode; no network request will be made.')
+
     base_url = os.getenv('LLM_BASE_URL', '').strip()
     model = os.getenv('LLM_MODEL', '').strip()
     api_key = os.getenv('LLM_API_KEY', '').strip()
@@ -143,6 +162,11 @@ def call_openai_compatible(messages: list[dict[str, str]]) -> tuple[str, str, st
     if not base_url or not model:
         raise InvestigatorConfigurationError('LLM_BASE_URL and LLM_MODEL must be configured; no synthetic fallback is provided.')
 
+    parsed_url = urlparse(base_url)
+    if parsed_url.scheme not in {'http', 'https'} or not parsed_url.netloc:
+        raise InvestigatorConfigurationError('LLM_BASE_URL must use an http or https URL.')
+
+    response_limit = _response_limit()
     payload = {
         'model': model,
         'messages': messages,
@@ -157,7 +181,10 @@ def call_openai_compatible(messages: list[dict[str, str]]) -> tuple[str, str, st
     )
     try:
         with request.urlopen(req, timeout=float(os.getenv('LLM_TIMEOUT', '30'))) as response:
-            parsed = json.loads(response.read().decode('utf-8'))
+            raw_response = response.read(response_limit + 1)
+            if len(raw_response) > response_limit:
+                raise InvestigatorProviderError(f'LLM provider response too large: exceeds {response_limit} bytes')
+            parsed = json.loads(raw_response.decode('utf-8'))
     except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError) as exc:
         raise InvestigatorProviderError(f'LLM provider request failed: {exc}') from exc
     return _extract_content(parsed), provider, model
