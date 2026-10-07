@@ -65,17 +65,22 @@ def scenarios() -> dict[str, list[str]]:
     return {"scenarios": sorted(load_scenarios().keys())}
 
 
+@app.get("/api/demo/attack", response_model=AnalysisResponse)
+def demo_attack() -> AnalysisResponse:
+    return analyze(load_events("attack_logs.json"))
+
+
+@app.get("/api/demo/clean", response_model=AnalysisResponse)
+def demo_clean() -> AnalysisResponse:
+    return analyze(load_events("clean_logs.json"))
+
+
 @app.get("/api/demo/{scenario}", response_model=AnalysisResponse)
 def demo_scenario(scenario: str) -> AnalysisResponse:
     available = load_scenarios()
     if scenario not in available:
         raise HTTPException(status_code=404, detail=f"unknown scenario: {scenario}")
     return analyze(available[scenario])
-
-
-@app.get("/api/demo/attack", response_model=AnalysisResponse)
-def demo_attack() -> AnalysisResponse:
-    return analyze(load_events("attack_logs.json"))
 
 
 @app.websocket("/ws/simulate/{scenario}")
@@ -135,11 +140,6 @@ async def simulate_scenario(websocket: WebSocket, scenario: str) -> None:
                 await websocket.close()
         except Exception:
             pass
-
-
-@app.get("/api/demo/clean", response_model=AnalysisResponse)
-def demo_clean() -> AnalysisResponse:
-    return analyze(load_events("clean_logs.json"))
 
 
 @app.post("/api/analyze", response_model=AnalysisResponse)

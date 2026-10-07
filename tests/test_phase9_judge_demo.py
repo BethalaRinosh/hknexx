@@ -50,3 +50,17 @@ def test_judge_partial_controls_remain_silent():
         result = analyze(scenarios[name])
         assert result.correlated_incidents == 0, name
         assert result.suppressed is True, name
+
+
+def test_fixed_demo_routes_are_not_shadowed_by_scenario_route():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    client = TestClient(app)
+    attack = client.get("/api/demo/attack")
+    clean = client.get("/api/demo/clean")
+
+    assert attack.status_code == 200
+    assert attack.json()["correlated_incidents"] == 1
+    assert clean.status_code == 200
+    assert clean.json()["correlated_incidents"] == 0

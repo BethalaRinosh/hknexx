@@ -54,6 +54,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 8 | Realtime telemetry simulation and streaming dashboard | Complete |
 | Task 9 | Cross-platform demo reproduction and Windows workflow hardening | Complete |
 | Task 10 | Upload resource and input hardening | Complete |
+| Task 11 | API route-order hardening and endpoint regression coverage | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -73,7 +74,7 @@ backend/cli.py provides file-based ingestion for JSON, JSONL, CSV, Windows, Sysm
 - report.md
 - run_summary.json
 
-The API also exposes POST /api/analyze/upload for multipart file analysis. config/schema.yml documents the configurable ingestion schema, while Makefile includes install, demo, test, and reproduce targets.
+The API also exposes POST /api/analyze/upload for multipart file analysis. Fixed demo endpoints are registered before the parameterized scenario endpoint so `/api/demo/attack` and `/api/demo/clean` remain reachable. config/schema.yml documents the configurable ingestion schema, while Makefile includes install, demo, test, and reproduce targets.
 
 ### CERT evaluation diagnostics
 
