@@ -266,8 +266,10 @@ Python 3.10+ is recommended.
 ```bash
 python -m venv .venv
 
-# Windows
-.venv\\Scripts\\activate
+# Windows PowerShell
+.\\.venv\\Scripts\\Activate.ps1
+# Windows CMD
+.venv\\Scripts\\activate.bat
 # Linux/macOS
 source .venv/bin/activate
 
