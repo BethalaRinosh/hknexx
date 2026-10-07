@@ -47,6 +47,17 @@ This is a **project-specific raw-data compatibility proxy**. It is not end-to-en
 | Benign proxy-chain windows | 7 |
 | Benign proxy-chain rate | 2.33% |
 
+## Scenario-level diagnostics
+
+The benchmark now preserves the classification for every malicious scenario in the result object and publishes an aggregate compatibility_breakdown. The classes are:
+
+- compatible: identity, sensitive-data proxy, and removable-media exfiltration proxy all exist in the scenario window.
+- missing_identity: no qualifying Logon event exists for the scenario user.
+- missing_sensitive_access: identity exists, but no qualifying file activity follows it within the reconstruction window.
+- missing_exfiltration: identity and sensitive-data proxy exist, but no qualifying removable-media correlation is found.
+
+These classifications are diagnostic coverage labels. They do not convert the raw CERT proxy into an end-to-end detector recall metric.
+
 ## Interpretation
 
 The **4.29% ordered-chain value must not be presented as detector recall**.
