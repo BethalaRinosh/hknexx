@@ -9,7 +9,7 @@ def test_phase11_adversarial_benchmark_passes():
     assert report.precision == 1.0
     assert report.recall == 0.8
     assert report.false_positive_rate == 0.0
-    assert report.false_negative_rate == 0.0
+    assert report.false_negative_rate == 0.2
 
 
 def test_phase11_tracks_hypotheses_separately_from_validated_incidents():
