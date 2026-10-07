@@ -186,6 +186,12 @@ The benchmark is synthetic and deterministic. It is a regression gate, not a pro
 
 The regression suite now checks confidence separation between complete attacks and partial hypotheses, duplicate-telemetry deduplication, reversed-input invariance and large benign haystacks. The corresponding methodology is documented in `docs/PHASE12_CONFIDENCE_DRIFT.md` and `docs/PHASE14_FINAL_ROBUSTNESS.md`.
 
+### Genuine generalization benchmark
+
+The project also adds a stricter Phase 13 benchmark that does **not** clone or mutate the canonical `full_attack` fixture. Malicious campaigns are independently authored with different identities, applications, resources, timing and evidence shapes, including new-device identity without a login, removable-copy exfiltration without a mount event, guarded slow campaigns and simultaneous campaigns. Benign controls cover authorization, identity collisions and large backups.
+
+This is still a synthetic canonical-schema benchmark, so it is evidence of structural generalization rather than a field-wide recall claim. The gate requires 100% validated recall on the independent malicious set and 0% validated false-positive rate on its benign controls.
+
 ## Validation status
 
 | Phase | Scope | Status |
@@ -201,6 +207,7 @@ The regression suite now checks confidence separation between complete attacks a
 | Phase 9 | Judge demo + CI hardening | ✅ Complete |
 | Phase 11 | Adversarial benchmark + campaign hypotheses | ✅ Complete |
 | Phase 12 | Confidence drift robustness | ✅ Complete |
+| Phase 13 | Independently authored generalization benchmark | Complete |
 | Phase 14 | Final robustness stress | ✅ Complete |
 
 ## Phase 2 — False-positive battle
@@ -338,6 +345,7 @@ docs/
   detection and phase specifications
   Phase 11 adversarial benchmark
   Phase 12 confidence drift
+  Phase 13 genuine generalization
   Phase 14 final robustness
   validation reports
   CERT raw acquisition/gate documentation
