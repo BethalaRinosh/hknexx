@@ -51,6 +51,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 5 | README and documentation hardening | Ongoing with every change |
 | Task 6 | Offline-safe investigator hardening | Complete |
 | Task 7 | Smaller defects and cleanup | Complete |
+| Task 8 | Realtime telemetry simulation and streaming dashboard | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -77,6 +78,25 @@ The API also exposes POST /api/analyze/upload for multipart file analysis. confi
 The raw CERT evaluator now preserves a result for every malicious scenario and classifies its project compatibility as `compatible`, `missing_identity`, `missing_sensitive_access`, or `missing_exfiltration`. The aggregate result also exposes a compatibility breakdown, making the 70-scenario coverage boundary auditable instead of hiding it behind a single percentage.
 
 This remains a project-specific proxy evaluation. CERT raw telemetry does not directly provide every field used by the production detector, so the benchmark does not claim end-to-end detector recall.
+
+### Realtime telemetry simulation
+
+The dashboard now includes an explicit **simulation mode** that behaves like a live telemetry feed without pretending to collect from a host. It emits the repository scenario events one at a time over a FastAPI WebSocket, runs the existing detector against the accumulated stream after every event, and updates the dashboard incrementally.
+
+This is intentionally a simulation boundary for the hackathon prototype:
+
+- no fabricated model inference is shown as real;
+- the simulator uses the same canonical SecurityEvent records as the normal pipeline;
+- the detector is invoked repeatedly as telemetry arrives;
+- a validated incident appears only when the accumulated evidence satisfies the deterministic chain;
+- the stream exposes start, event, complete, and error messages;
+- a future real collector can implement the same async event-stream contract without changing the detector.
+
+The live simulation endpoint is:
+
+`WS /ws/simulate/{scenario}?delay=<seconds>`
+
+For example, the dashboard's **Start Live Simulation** control runs the selected scenario with a visible 0.9-second event cadence. The normal file upload and batch APIs remain available.
 
 ### Audit hardening
 
