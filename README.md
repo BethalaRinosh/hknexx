@@ -49,7 +49,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 3 | Config-driven attack stages and incident response templates | Complete |
 | Task 4 | Real CERT evaluation refinement with scenario-level compatibility diagnostics | Complete |
 | Task 5 | README and documentation hardening | Ongoing with every change |
-| Task 6 | Offline-safe investigator hardening | Planned |
+| Task 6 | Offline-safe investigator hardening | Complete |
 | Task 7 | Smaller defects and cleanup | Planned |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
@@ -129,7 +129,21 @@ Validated incidents receive a causal reconstruction containing candidate stage e
 
 ## Phase 7 — Grounded LLM investigator
 
-The optional investigator runs **after** deterministic incident validation. Its sealed evidence packet contains the validated incident, reconstruction, ATT&CK enrichment and timeline. Claims must cite real event IDs and are checked by a deterministic validator. Missing provider configuration fails closed; there is no synthetic fallback.
+The optional investigator runs **after** deterministic incident validation. Its sealed evidence packet contains the validated incident, reconstruction, ATT&CK enrichment and timeline. Claims must cite real event IDs and are checked by a deterministic validator.
+
+### Offline and provider safety
+
+The investigator fails closed when no provider is configured and can be explicitly disabled with `LLM_OFFLINE=1`. Offline mode rejects the request before any network operation.
+
+When enabled, the provider endpoint must use HTTP or HTTPS. Provider response bodies are bounded by `LLM_MAX_RESPONSE_BYTES`, defaulting to 1 MiB, to prevent an unexpectedly large response from consuming unbounded memory.
+
+Example offline configuration:
+
+```bash
+LLM_OFFLINE=1
+```
+
+For an active provider, configure `LLM_BASE_URL` and `LLM_MODEL`; optionally set `LLM_API_KEY`, `LLM_PROVIDER`, `LLM_TIMEOUT`, and `LLM_MAX_RESPONSE_BYTES`.
 
 ## Phase 8 — Public dataset validation
 
