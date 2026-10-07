@@ -129,8 +129,11 @@ async def simulate_scenario(websocket: WebSocket, scenario: str) -> None:
         except Exception:
             pass
     finally:
-        if websocket.application_state.value < 2:
-            await websocket.close()
+        try:
+            if websocket.client_state.name != "DISCONNECTED":
+                await websocket.close()
+        except Exception:
+            pass
 
 
 @app.get("/api/demo/clean", response_model=AnalysisResponse)
