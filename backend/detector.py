@@ -156,7 +156,10 @@ def _is_removable_exfil(event: SecurityEvent) -> bool:
         copied_bytes = int(event.metadata.get("bytes", 0) or 0)
     except (TypeError, ValueError):
         copied_bytes = 0
-    if event.metadata.get("large_transfer") is not True and copied_bytes < 1_000_000_000:
+    if "large_transfer" in event.metadata:
+        if not event.metadata["large_transfer"]:
+            return False
+    elif copied_bytes < 1_000_000_000:
         return False
     if "removable_destination" in event.metadata:
         return bool(event.metadata["removable_destination"])
