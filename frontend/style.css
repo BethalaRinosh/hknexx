@@ -47,3 +47,9 @@ select{border:1px solid #263044;background:#111827;color:#dbe5f5;border-radius:1
 .live-event-main{min-width:0}
 .live-event-top{display:flex;justify-content:space-between;gap:12px}
 .live-event-top span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#7f8ca4;font-size:10px}
+
+.investigator-panel{margin-bottom:12px}
+.investigator-output{display:grid;gap:10px}
+.investigator-summary{padding:13px 14px;border:1px solid #26334a;border-radius:12px;background:#0a0f18;line-height:1.55}
+.investigator-claim{padding:11px 13px;border:1px solid #202a3d;border-radius:12px;background:#0a0f18}
+.investigator-claim p{margin:5px 0 8px}
