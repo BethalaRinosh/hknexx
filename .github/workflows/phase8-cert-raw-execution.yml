@@ -10,7 +10,7 @@ on:
 jobs:
   cert-raw:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,78 +23,65 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
 
-      - name: Download raw CERT r4.2 public mirror
+      - name: Download raw CERT r4.2 files from public mirror
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p external/cert_raw
-          curl -fL --retry 5 --retry-delay 3 --connect-timeout 30 --max-time 1800 \
-            "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2" \
-            -o external/cert_raw/cert-r4.2.zip
-          test -s external/cert_raw/cert-r4.2.zip
-          echo "Archive bytes: $(wc -c < external/cert_raw/cert-r4.2.zip)"
 
-      - name: Verify archive contents
-        shell: bash
-        run: |
-          set -euo pipefail
-          unzip -t external/cert_raw/cert-r4.2.zip >/dev/null
-          echo "Required entries:"
-          unzip -Z1 external/cert_raw/cert-r4.2.zip | grep -E '(^|/)r4\.2/(logon|device|file)\.csv$|(^|/)answers/insiders\.csv$' | sort
-
-      - name: Extract raw benchmark files
-        shell: bash
-        run: |
-          set -euo pipefail
-          ZIP=external/cert_raw/cert-r4.2.zip
-          find_entry() {
-            local pattern="$1"
-            unzip -Z1 "$ZIP" | awk -v p="$pattern" '$0 ~ p {print; exit}'
+          download_one() {
+            local remote_path="$1"
+            local output="$2"
+            local encoded
+            encoded="$(python -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$remote_path")"
+            local archive="external/cert_raw/$(basename "$output").zip"
+            echo "Downloading $remote_path"
+            curl -fL --retry 5 --retry-delay 2 --connect-timeout 30 --max-time 900 \
+              "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2?file_name=$encoded" \
+              -o "$archive"
+            test -s "$archive"
+            unzip -t "$archive" >/dev/null
+            local entry
+            entry="$(unzip -Z1 "$archive" | head -n 1)"
+            test -n "$entry"
+            unzip -p "$archive" "$entry" > "external/cert_raw/$output"
+            test -s "external/cert_raw/$output"
+            rm -f "$archive"
           }
 
-          LOGON_ENTRY="$(find_entry '(^|/)r4[.]2/logon[.]csv$')"
-          DEVICE_ENTRY="$(find_entry '(^|/)r4[.]2/device[.]csv$')"
-          FILE_ENTRY="$(find_entry '(^|/)r4[.]2/file[.]csv$')"
-          INSIDER_ENTRY="$(find_entry '(^|/)answers/insiders[.]csv$')"
+          download_one "r4.2/logon.csv" "logon.csv"
+          download_one "r4.2/device.csv" "device.csv"
+          download_one "r4.2/file.csv" "file.csv"
+          download_one "answers/insiders.csv" "insiders.csv"
 
-          test -n "$LOGON_ENTRY"
-          test -n "$DEVICE_ENTRY"
-          test -n "$FILE_ENTRY"
-          test -n "$INSIDER_ENTRY"
-
-          unzip -p "$ZIP" "$LOGON_ENTRY" > external/cert_raw/logon.csv
-          unzip -p "$ZIP" "$DEVICE_ENTRY" > external/cert_raw/device.csv
-          unzip -p "$ZIP" "$FILE_ENTRY" > external/cert_raw/file.csv
-          unzip -p "$ZIP" "$INSIDER_ENTRY" > external/cert_raw/insiders.csv
-
-          python scripts/verify_cert_raw_layout.py --data-dir external/cert_raw
-
-      - name: Validate CERT raw signatures
+      - name: Verify raw CERT layout and signatures
         shell: bash
         run: |
           set -euo pipefail
+          python scripts/verify_cert_raw_layout.py --data-dir external/cert_raw
+
           LOGON_ROWS="$(($(wc -l < external/cert_raw/logon.csv) - 1))"
           DEVICE_ROWS="$(($(wc -l < external/cert_raw/device.csv) - 1))"
           FILE_ROWS="$(($(wc -l < external/cert_raw/file.csv) - 1))"
           INSIDER_ROWS="$(($(wc -l < external/cert_raw/insiders.csv) - 1))"
 
-          echo "logon rows:   $LOGON_ROWS"
-          echo "device rows:  $DEVICE_ROWS"
-          echo "file rows:    $FILE_ROWS"
-          echo "insider rows: $INSIDER_ROWS"
+          echo "CERT_RAW_LOGON_ROWS=$LOGON_ROWS"
+          echo "CERT_RAW_DEVICE_ROWS=$DEVICE_ROWS"
+          echo "CERT_RAW_FILE_ROWS=$FILE_ROWS"
+          echo "CERT_RAW_INSIDER_ROWS=$INSIDER_ROWS"
 
           test "$LOGON_ROWS" -ge 800000
           test "$DEVICE_ROWS" -ge 350000
           test "$FILE_ROWS" -ge 500000
           test "$INSIDER_ROWS" -ge 180
 
-      - name: Run raw CERT benchmark
+      - name: Run raw CERT r4.2 benchmark
         run: |
           python scripts/run_cert_raw_benchmark.py \
             --data-dir external/cert_raw \
             --json-out external/cert_raw/phase8_cert_raw_result.json
 
-      - name: Publish raw benchmark artifact
+      - name: Upload raw CERT result
         uses: actions/upload-artifact@v4
         with:
           name: phase8-cert-raw-result
