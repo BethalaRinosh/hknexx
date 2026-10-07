@@ -1,0 +1,33 @@
+enrichment:
+  suspicious_public_ip:
+    enabled: true
+    private_ranges:
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+      - "192.168.0.0/16"
+      - "127.0.0.0/8"
+  sensitive_resource:
+    enabled: true
+    keywords:
+      - finance
+      - payroll
+      - acquisition
+      - confidential
+      - secret
+      - credentials
+      - password
+      - customer
+  large_transfer:
+    enabled: true
+    bytes: 1000000000
+  removable_destination:
+    enabled: true
+    tokens:
+      - usb
+      - removable
+      - external
+  new_device:
+    enabled: true
+    event_types:
+      - device_enroll
+      - device_registration
