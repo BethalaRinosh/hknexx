@@ -152,7 +152,7 @@ def analyze_logs(events: list[SecurityEvent]) -> AnalysisResponse:
 
 UPLOAD_MAX_BYTES_DEFAULT = 10 * 1024 * 1024
 ALLOWED_UPLOAD_SUFFIXES = {".json", ".jsonl", ".ndjson", ".csv", ".xml"}
-\nMAX_API_EVENTS_DEFAULT = 5000
+MAX_API_EVENTS_DEFAULT = 5000
 
 
 def _api_event_limit() -> int:
