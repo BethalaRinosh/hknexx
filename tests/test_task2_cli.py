@@ -154,3 +154,42 @@ def test_upload_endpoint_enforces_configured_size_limit(monkeypatch):
 
     assert response.status_code == 413
     assert "exceeds the 16 byte limit" in response.json()["detail"]
+
+
+def test_cli_windows_xml_accepts_utf16_export(tmp_path):
+    source = tmp_path / "events.xml"
+    xml = """<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+      <System>
+        <Provider Name="Microsoft-Windows-Security-Auditing"/>
+        <EventID>4624</EventID>
+        <TimeCreated SystemTime="2026-10-06T19:10:00Z"/>
+        <Computer>WIN-DC01</Computer>
+      </System>
+      <EventData>
+        <Data Name="TargetUserName">alice</Data>
+        <Data Name="TargetLogonId">0x123</Data>
+        <Data Name="IpAddress">203.0.113.55</Data>
+      </EventData>
+    </Event>"""
+    source.write_bytes(xml.encode("utf-16"))
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "backend.cli",
+            "analyze",
+            str(source),
+            "--out",
+            str(tmp_path / "out"),
+            "--format",
+            "windows",
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    summary = json.loads((tmp_path / "out" / "run_summary.json").read_text(encoding="utf-8"))
+    assert summary["counts"]["normalized_events"] == 1
