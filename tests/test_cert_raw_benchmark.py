@@ -64,7 +64,7 @@ def test_raw_cert_classifies_missing_identity_without_inflating_compatibility(tm
     )
     (tmp_path / "logon.csv").write_text(
         "user,pc,date,activity\n"
-        "U1,PC1,01/01/2026 09:00:00,Logon\n"
+        "U1,PC1,01/01/2026 09:00:00,Logout\n"
         "U2,PC2,01/01/2026 10:00:00,Logout\n"
         "U3,PC3,01/01/2026 11:00:00,Logout\n",
         encoding="utf-8",
