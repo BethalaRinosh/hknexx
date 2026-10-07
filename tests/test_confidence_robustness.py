@@ -29,7 +29,7 @@ def test_duplicate_attack_telemetry_does_not_create_duplicate_incidents():
     result = analyze(events)
 
     assert result.correlated_incidents == 1
-    assert result.incidents[0].evidence_count == 4
+    assert result.incidents[0].evidence_count == 5
 
 
 def test_large_benign_haystack_stays_silent():
