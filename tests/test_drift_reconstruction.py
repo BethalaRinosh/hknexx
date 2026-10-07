@@ -50,8 +50,9 @@ def test_long_spacing_without_strong_identity_is_not_reconstructed():
 def test_reconstruction_retains_decoy_candidates():
     events = load_scenario("full_attack")
     events.append(
-        events[2].model_copy(
-            update={
+        SecurityEvent.model_validate(
+            events[2].model_dump(mode="json", round_trip=True)
+            | {
                 "event_id": "DECOY-SENSITIVE",
                 "timestamp": "2026-10-06T09:16:00Z",
                 "resource": "/finance/payroll.xlsx",
