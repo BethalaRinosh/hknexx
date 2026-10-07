@@ -353,7 +353,8 @@
       "source": "file_server",
       "severity": "high",
       "metadata": {
-        "sensitive": true
+        "sensitive": true,
+        "behavior_score": 0.75
       }
     },
     {
