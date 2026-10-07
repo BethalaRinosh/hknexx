@@ -1,0 +1,61 @@
+[
+  {
+    "id": "SAMPLE-A1",
+    "timestamp": "2026-10-07T09:00:00Z",
+    "type": "authentication",
+    "username": "alice",
+    "hostname": "WS-1",
+    "source_ip": "185.10.10.10",
+    "log_source": "auth",
+    "severity": "medium"
+  },
+  {
+    "id": "SAMPLE-A2",
+    "timestamp": "2026-10-07T09:04:00Z",
+    "type": "device_registration",
+    "username": "alice",
+    "hostname": "WS-1",
+    "source_ip": "185.10.10.10",
+    "log_source": "endpoint",
+    "severity": "medium"
+  },
+  {
+    "id": "SAMPLE-A3",
+    "timestamp": "2026-10-07T09:07:00Z",
+    "type": "file_read",
+    "username": "alice",
+    "hostname": "WS-1",
+    "source_ip": "185.10.10.10",
+    "path": "/finance/acquisition.pdf",
+    "log_source": "file_server",
+    "severity": "high"
+  },
+  {
+    "id": "SAMPLE-A4",
+    "timestamp": "2026-10-07T09:10:00Z",
+    "type": "usb_insert",
+    "username": "alice",
+    "hostname": "WS-1",
+    "source_ip": "185.10.10.10",
+    "resource": "USB-44",
+    "action": "mount",
+    "log_source": "endpoint",
+    "severity": "high"
+  },
+  {
+    "id": "SAMPLE-A5",
+    "timestamp": "2026-10-07T09:11:00Z",
+    "type": "copy",
+    "username": "alice",
+    "hostname": "WS-1",
+    "source_ip": "185.10.10.10",
+    "path": "/finance/acquisition.pdf",
+    "action": "copy_to_usb",
+    "log_source": "endpoint",
+    "severity": "critical",
+    "metadata": {
+      "bytes": 2400000000,
+      "destination": "USB-44"
+    }
+  }
+]

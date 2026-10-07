@@ -284,3 +284,20 @@ document.getElementById("scenarioBtn").onclick = () => load(`/api/demo/${encodeU
 loadScenarios();
 loadPhase2Report();
 load("/api/demo/full_attack");
+
+document.getElementById("uploadBtn").onclick = async () => {
+  const input = document.getElementById("logFile");
+  if (!input.files?.length) {
+    incidentBanner.innerHTML = '<div class="banner-danger"><b>UPLOAD ERROR</b><span>Select a log file first.</span></div>';
+    return;
+  }
+  const form = new FormData();
+  form.append("file", input.files[0]);
+  try {
+    const res = await fetch("/api/analyze/upload", { method: "POST", body: form });
+    if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+    render(await res.json());
+  } catch (error) {
+    incidentBanner.innerHTML = `<div class="banner-danger"><b>UPLOAD ERROR</b><span>${esc(error.message)}</span></div>`;
+  }
+};

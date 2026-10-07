@@ -1,0 +1,14 @@
+# Map source column names to canonical SecurityEvent fields.
+fields:
+  event_id: event_id
+  timestamp: timestamp
+  event_type: event_type
+  user: user
+  device: device
+  src_ip: src_ip
+  dst_ip: dst_ip
+  application: application
+  resource: resource
+  action: action
+  source: source
+  severity: severity

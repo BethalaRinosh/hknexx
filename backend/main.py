@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -11,6 +12,7 @@ from .adapters import normalize_sysmon_event, normalize_windows_event, normalize
 from .behavior import build_profiles, enrich_events
 from .detector import analyze
 from .investigator import investigate
+from .cli import parse_file
 from .reconstructor import reconstruct
 from .evaluator import run_phase2
 from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, InvestigationReport, InvestigationRequest, Phase2Report, SecurityEvent
@@ -83,6 +85,28 @@ def analyze_logs(events: list[SecurityEvent]) -> AnalysisResponse:
     if not events:
         raise HTTPException(status_code=400, detail="events must not be empty")
     return analyze(events)
+
+
+@app.post("/api/analyze/upload", response_model=AnalysisResponse)
+async def analyze_upload(
+    file: UploadFile = File(...),
+    format_name: str = "auto",
+) -> AnalysisResponse:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="file must have a filename")
+    suffix = Path(file.filename).suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as handle:
+        handle.write(await file.read())
+        temp_path = Path(handle.name)
+    try:
+        events = parse_file(temp_path, format_name=format_name)
+        if not events:
+            raise HTTPException(status_code=400, detail="file contains no events")
+        return analyze(events)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 @app.post("/api/analyze/raw", response_model=AnalysisResponse)
