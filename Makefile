@@ -14,5 +14,5 @@ demo:
 test:
 	$(PYTHON) -m pytest -q
 
-reproduce: demo test
-	$(PYTHON) -m pytest -q tests/test_task2_cli.py
+reproduce: demo
+	$(PYTHON) -m pytest -q tests/test_task2_reproduce.py
