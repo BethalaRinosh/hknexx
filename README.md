@@ -53,6 +53,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 7 | Smaller defects and cleanup | Complete |
 | Task 8 | Realtime telemetry simulation and streaming dashboard | Complete |
 | Task 9 | Cross-platform demo reproduction and Windows workflow hardening | Complete |
+| Task 10 | Upload resource and input hardening | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -98,6 +99,20 @@ The live simulation endpoint is:
 `WS /ws/simulate/{scenario}?delay=<seconds>`
 
 For example, the dashboard's **Start Live Simulation** control runs the selected scenario with a visible 0.9-second event cadence. The normal file upload and batch APIs remain available.
+
+### Upload safety
+
+The multipart upload endpoint is bounded and fails closed:
+
+- auto-detected uploads accept only `.json`, `.jsonl`, `.ndjson`, `.csv`, and `.xml`;
+- filenames are reduced to their basename and capped at 255 characters;
+- upload data is streamed in bounded chunks instead of being read into memory at once;
+- the default upload limit is **10 MiB**;
+- `HNX_UPLOAD_MAX_BYTES` can lower or raise the limit for a controlled deployment;
+- oversized uploads return HTTP 413 before parsing;
+- unsupported extensions return HTTP 415.
+
+These controls reduce uncontrolled resource consumption at the file-ingestion boundary. The endpoint is still intended as a hackathon/demo API, not an authenticated production ingestion gateway.
 
 ### Audit hardening
 
@@ -334,7 +349,7 @@ The CLI fails closed on unsupported schemas and reports the fields it found plus
 - `GET /api/demo/attack`
 - `GET /api/demo/clean`
 - `POST /api/analyze`
-- `POST /api/analyze/upload`
+- `POST /api/analyze/upload` — bounded to 10 MiB by default; set `HNX_UPLOAD_MAX_BYTES` to override
 - `POST /api/analyze/raw`
 - `POST /api/analyze/windows`
 - `POST /api/analyze/windows/xml`
