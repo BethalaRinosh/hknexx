@@ -3,140 +3,158 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Evidence-First CTI · Judge Console</title>
+  <meta name="description" content="Evidence-first cyber attack reconstruction console" />
+  <title>HNX Attack Reconstruction</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <main class="shell">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">HNX26PSI03 · AI-POWERED CYBER THREAT INTELLIGENCE</p>
-        <h1>Evidence-First Attack Reconstruction</h1>
-        <p class="subtitle">Detect the campaign, reconstruct the causal chain, and show exactly why every stage is supported.</p>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">HNX</div>
+        <div>
+          <p class="eyebrow">HNX26PSI03 · SECURITY TELEMETRY</p>
+          <h1>Attack Reconstruction</h1>
+          <p class="subtitle">Connect events, verify the evidence, and see why an attack was or was not validated.</p>
+        </div>
       </div>
-      <div class="controls">
-        <button id="attackBtn" class="primary">Run Judge Demo</button>
-        <button id="liveBtn">Start Live Simulation</button>
-        <button id="simulateInvestigatorBtn">Simulate AI Investigator</button>
-        <button id="cleanBtn">Run Clean</button>
-        <label class="file-upload"><input id="logFile" type="file" accept=".json,.jsonl,.ndjson,.csv,.xml" /><span>Choose Log</span></label>
-        <button id="uploadBtn">Analyze File</button>
-      </div>
+      <div class="header-status"><span class="status-dot"></span> Evidence-first engine</div>
     </header>
 
-    <section class="judge-strip">
-      <div><span>DETECTION</span><strong>Multi-stage correlation</strong></div>
-      <div><span>PROOF</span><strong>Event-ID evidence</strong></div>
-      <div><span>INTELLIGENCE</span><strong>MITRE ATT&CK</strong></div>
-      <div><span>CONTROL</span><strong>Benign suppression</strong></div>
-    </section>
-
-    <section class="panel live-panel">
-      <div class="panel-head">
-        <div>
-          <h2>Live Telemetry Stream</h2>
-          <div class="muted">Simulation mode feeds canonical telemetry one event at a time into the same enrichment and detection pipeline.</div>
-        </div>
-        <span id="liveStatus" class="pill">READY</span>
-      </div>
-      <div id="liveStream" class="live-stream"><div class="empty">No live stream running. Start the simulation to watch the chain build in real time.</div></div>
-    </section>
-
-    <section class="panel investigator-panel">
-      <div class="panel-head">
-        <div>
-          <h2>AI Investigator</h2>
-          <div class="muted">Demo-only deterministic simulation. The real LLM provider remains a separate optional path.</div>
-        </div>
-        <span id="investigatorStatus" class="pill">NOT RUN</span>
-      </div>
-      <div id="investigatorOutput" class="investigator-output"><div class="empty">Validate an incident, then run the labeled investigator simulation.</div></div>
-    </section>
-
-    <section class="panel scenario-panel">
-      <div class="panel-head">
-        <div>
-          <h2>Scenario Lab</h2>
-          <div class="muted">Use adversarial cases to demonstrate what the engine alerts on — and what it deliberately ignores.</div>
-        </div>
-        <div class="controls">
+    <section class="command-bar" aria-label="Analysis controls">
+      <div class="command-main">
+        <button id="attackBtn" class="primary">Run attack demo</button>
+        <button id="cleanBtn">Run clean demo</button>
+        <div class="scenario-control">
+          <label for="scenarioSelect">Scenario</label>
           <select id="scenarioSelect"></select>
-          <button id="scenarioBtn">Run Scenario</button>
+          <button id="scenarioBtn">Run</button>
         </div>
+      </div>
+      <div class="command-secondary">
+        <button id="liveBtn">Start live simulation</button>
+        <button id="simulateInvestigatorBtn" disabled>Investigator report</button>
+        <label class="file-upload"><input id="logFile" type="file" accept=".json,.jsonl,.ndjson,.csv,.xml" /><span>Choose log</span></label>
+        <button id="uploadBtn">Analyze file</button>
       </div>
     </section>
 
-    <section class="panel validation-panel">
-      <div class="panel-head">
-        <div>
-          <h2>Validation Status</h2>
-          <div class="muted">Phase 2 gate remains visible so the demo never hides false-positive performance.</div>
-        </div>
-        <span id="phase2Pill" class="pill">RUNNING</span>
+    <section class="result-header">
+      <div>
+        <span class="section-kicker">CURRENT ANALYSIS</span>
+        <h2 id="resultTitle">Waiting for telemetry</h2>
+        <p id="resultSummary">Run a demo, choose a scenario, or upload a log to begin.</p>
       </div>
-      <div id="phase2Report" class="validation-grid"></div>
+      <span id="statusPill" class="pill neutral">READY</span>
     </section>
-
-    <section class="panel hypothesis-panel">
-      <div class="panel-head">
-        <div>
-          <h2>Campaign Hypotheses</h2>
-          <div class="muted">Incomplete or contradictory evidence is surfaced here without being promoted to a validated incident.</div>
-        </div>
-        <span id="hypothesisPill" class="pill">NONE</span>
-      </div>
-      <div id="hypotheses" class="hypothesis-grid"></div>
-    </section>
-
-    <section class="stats" id="stats"></section>
 
     <section id="incidentBanner" class="incident-banner"></section>
+    <section class="stats" id="stats"></section>
 
-    <section class="grid">
+    <section class="primary-grid">
       <article class="panel timeline-panel">
-        <div class="panel-head"><h2>1 · Attack Timeline</h2><span id="statusPill" class="pill">—</span></div>
+        <div class="panel-head">
+          <div><span class="section-kicker">WHAT HAPPENED</span><h2>Attack timeline</h2></div>
+          <span class="muted">ordered telemetry</span>
+        </div>
         <div id="timeline" class="timeline"></div>
       </article>
 
-      <article class="panel">
-        <div class="panel-head"><h2>2 · Campaign Risk</h2><span class="muted">why the chain crosses the incident threshold</span></div>
+      <article class="panel risk-panel">
+        <div class="panel-head">
+          <div><span class="section-kicker">WHY IT MATTERS</span><h2>Campaign risk</h2></div>
+        </div>
         <div id="risk"></div>
         <div id="confidence" class="confidence"></div>
       </article>
-
-      <article class="panel span-2">
-        <div class="panel-head"><h2>3 · Entity Graph</h2><span class="muted">user · device · IP · application · resource</span></div>
-        <div id="graph" class="graph-wrap"></div>
-      </article>
-
-      <article class="panel span-2">
-        <div class="panel-head"><h2>4 · Attack Stages & Evidence</h2><span class="muted">every stage must have proof</span></div>
-        <div id="stages" class="stage-grid"></div>
-      </article>
-
-      <article class="panel span-2">
-        <div class="panel-head">
-          <h2>5 · Deterministic Reconstruction</h2>
-          <span id="reconstructionPill" class="pill">—</span>
-        </div>
-        <div id="reconstruction" class="reconstruction"></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><h2>6 · ATT&CK Intelligence</h2></div>
-        <div id="attackIntel" class="intel-list"></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-head"><h2>7 · Entities</h2></div>
-        <div id="entities" class="chips"></div>
-      </article>
-
-      <article class="panel span-2">
-        <div class="panel-head"><h2>8 · Recommended Response</h2><span class="muted">deterministic response guidance</span></div>
-        <div id="response" class="response-grid"></div>
-      </article>
     </section>
+
+    <section class="panel stages-panel">
+      <div class="panel-head">
+        <div><span class="section-kicker">PROOF</span><h2>Attack stages</h2></div>
+        <span class="muted">Every validated stage needs evidence</span>
+      </div>
+      <div id="stages" class="stage-grid"></div>
+    </section>
+
+    <section class="panel reconstruction-panel">
+      <div class="panel-head">
+        <div><span class="section-kicker">CORRELATION</span><h2>Deterministic reconstruction</h2></div>
+        <span id="reconstructionPill" class="pill neutral">NOT RUN</span>
+      </div>
+      <div id="reconstruction" class="reconstruction"></div>
+    </section>
+
+    <details class="advanced-section">
+      <summary>
+        <span><b>Context &amp; intelligence</b><small>Entity graph, ATT&amp;CK mapping, entities and response</small></span>
+        <span class="summary-action">Show details</span>
+      </summary>
+      <div class="advanced-grid">
+        <article class="panel span-2">
+          <div class="panel-head"><h2>Entity graph</h2><span class="muted">user · device · IP · app · resource</span></div>
+          <div id="graph" class="graph-wrap"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>ATT&amp;CK intelligence</h2></div>
+          <div id="attackIntel" class="intel-list"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Entities</h2></div>
+          <div id="entities" class="chips"></div>
+        </article>
+        <article class="panel span-2">
+          <div class="panel-head"><h2>Recommended response</h2><span class="muted">deterministic guidance</span></div>
+          <div id="response" class="response-grid"></div>
+        </article>
+      </div>
+    </details>
+
+    <details class="advanced-section">
+      <summary>
+        <span><b>Analyst tools</b><small>Live telemetry and grounded investigator simulation</small></span>
+        <span class="summary-action">Show tools</span>
+      </summary>
+      <div class="tools-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div><span class="section-kicker">STREAM</span><h2>Live telemetry</h2></div>
+            <span id="liveStatus" class="pill neutral">READY</span>
+          </div>
+          <div id="liveStream" class="live-stream"><div class="empty">Start a live simulation to watch events arrive one by one.</div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div><span class="section-kicker">ASSISTED REVIEW</span><h2>Investigator report</h2></div>
+            <span id="investigatorStatus" class="pill neutral">NOT RUN</span>
+          </div>
+          <div id="investigatorOutput" class="investigator-output"><div class="empty">Validate an incident first, then run the deterministic investigator report.</div></div>
+        </article>
+      </div>
+    </details>
+
+    <details class="advanced-section">
+      <summary>
+        <span><b>Validation &amp; incomplete campaigns</b><small>Phase 2 quality gate and campaign hypotheses</small></span>
+        <span class="summary-action">Show validation</span>
+      </summary>
+      <div class="tools-grid">
+        <article class="panel">
+          <div class="panel-head">
+            <div><span class="section-kicker">QUALITY GATE</span><h2>Validation status</h2></div>
+            <span id="phase2Pill" class="pill neutral">RUNNING</span>
+          </div>
+          <div id="phase2Report" class="validation-grid"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head">
+            <div><span class="section-kicker">NOT YET VALIDATED</span><h2>Campaign hypotheses</h2></div>
+            <span id="hypothesisPill" class="pill neutral">NONE</span>
+          </div>
+          <div id="hypotheses" class="hypothesis-grid"></div>
+        </article>
+      </div>
+    </details>
   </main>
   <script src="/static/app.js"></script>
 </body>
