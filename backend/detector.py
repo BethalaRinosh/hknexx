@@ -422,7 +422,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
         initial_evidence = stage_events["identity"]
         if initial_evidence:
             mapped = enrich_technique(
-                "T1078",
+                stage_defs["identity"]["technique"],
                 initial_evidence,
                 rationale=(
                     "The identity stage is linked to Valid Accounts because the "
@@ -437,7 +437,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
 
         if sensitive:
             mapped = enrich_technique(
-                "T1005",
+                stage_defs["sensitive_access"]["technique"],
                 [sensitive],
                 rationale=(
                     "The chain contains sensitive local-resource access immediately "
@@ -452,7 +452,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
         if copy:
             exfil_evidence = [event for event in (usb, copy) if event]
             mapped = enrich_technique(
-                "T1052.001",
+                stage_defs["exfiltration"]["technique"],
                 exfil_evidence,
                 rationale=(
                     "The chain contains removable-media insertion plus a large copy "
@@ -469,7 +469,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
         incidents.append(
             Incident(
                 incident_id=f"INC-{key_for_incident(chain)}",
-                title="Suspected multi-stage data exfiltration",
+                title=incident_template["title"],
                 severity="critical" if confidence >= 0.90 else "high",
                 confidence=confidence,
                 risk_score=min(100, int(round(confidence * 100))),
@@ -489,12 +489,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                 evidence_count=len(chain),
                 attack_techniques=attack_techniques,
                 reconstruction=reconstruction,
-                recommended_actions=[
-                    "Disable or step-up authenticate the affected account.",
-                    "Isolate the correlated device from the network.",
-                    "Preserve endpoint, file and removable-media telemetry.",
-                    "Investigate the accessed sensitive resources and transfer destination.",
-                ],
+                recommended_actions=list(incident_template["recommended_actions"]),
             )
         )
 
