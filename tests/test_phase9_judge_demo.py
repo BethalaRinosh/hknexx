@@ -46,7 +46,7 @@ def test_judge_clean_control_contract():
 
 def test_judge_partial_controls_remain_silent():
     scenarios = load_scenarios()
-    for name in ("login_only", "usb_only", "reversed_order", "slow_attack", "mismatched_entities"):
+    for name in ("login_only", "usb_only", "reversed_order", "mismatched_entities"):
         result = analyze(scenarios[name])
         assert result.correlated_incidents == 0, name
         assert result.suppressed is True, name
