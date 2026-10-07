@@ -78,6 +78,10 @@ The raw CERT evaluator now preserves a result for every malicious scenario and c
 
 This remains a project-specific proxy evaluation. CERT raw telemetry does not directly provide every field used by the production detector, so the benchmark does not claim end-to-end detector recall.
 
+### Audit hardening
+
+The end-to-end pipeline now preserves configuration semantics and evidence chronology across ingestion and detection. Nested stage overrides retain unspecified defaults, explicit enrichment flags are honored by the detector, malformed transfer metadata fails closed, configured transfer thresholds are authoritative, device-enrollment signals are not backdated, and untrusted event types are escaped before dashboard rendering.
+
 ### Config-driven stages and templates
 
 config/rules.yml now controls the display name, ATT&CK technique, confidence values, stage reasons, evidence reasons, incident title, and recommended response actions used by the deterministic detector. The detector retains internal stable stage keys so configuration changes do not alter correlation semantics.
