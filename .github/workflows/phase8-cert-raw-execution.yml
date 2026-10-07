@@ -9,6 +9,7 @@ on:
 
 jobs:
   cert-raw:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'phase8-cert-raw-execution' || github.ref == 'refs/heads/phase8-cert-raw-execution'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
