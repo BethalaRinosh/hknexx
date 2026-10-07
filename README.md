@@ -221,6 +221,61 @@ docs/
 
 Python 3.10+ is recommended.
 
+### Install
+
+```bash
+python -m venv .venv
+
+# Windows
+.venv\\Scripts\\activate
+# Linux/macOS
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### Start the dashboard
+
+```bash
+uvicorn backend.main:app --reload
+```
+
+Open `http://127.0.0.1:8000`.
+
+### Reproduce the demo pipeline
+
+The repository includes a Makefile for the reproducible demo and regression flow:
+
+```bash
+make install
+make demo
+make test
+make reproduce
+```
+
+`make demo` analyzes the committed attack and clean samples and writes artifacts under `out/demo/`. The pipeline emits `normalized.jsonl`, `enriched.jsonl`, `incidents.json`, `report.md`, and `run_summary.json`.
+
+### File-based CLI
+
+Analyze supported telemetry directly without starting the API:
+
+```bash
+python -m backend.cli analyze <input-file> --out out/run --format auto --config config/rules.yml
+```
+
+Supported formats are JSON, JSONL/NDJSON, CSV, Windows JSON/XML, Sysmon JSON, and Zeek JSON. For generic JSON/JSONL/CSV inputs, `config/schema.yml` can map source column names to canonical `SecurityEvent` fields.
+
+Example:
+
+```bash
+python -m backend.cli analyze data/sample/attack.json --out out/attack --config config/rules.yml
+```
+
+The CLI fails closed on unsupported schemas and reports the fields it found plus the canonical fields/aliases it expects.
+
+
+Python 3.10+ is recommended.
+
 ```bash
 python -m venv .venv
 
