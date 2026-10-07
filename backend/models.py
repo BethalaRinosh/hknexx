@@ -151,6 +151,17 @@ class Phase2Report(BaseModel):
     cases: list[EvaluationCase]
 
 
+class CampaignHypothesis(BaseModel):
+    hypothesis_id: str
+    confidence: float
+    observed_stages: list[str]
+    missing_stages: list[str]
+    evidence_event_ids: list[str]
+    temporal_valid: bool
+    entity_consistency_score: float
+    reason: str
+
+
 class AnalysisResponse(BaseModel):
     total_events: int
     suspicious_events: int
@@ -158,6 +169,7 @@ class AnalysisResponse(BaseModel):
     suppressed_events: int
     correlated_incidents: int
     incidents: list[Incident]
+    campaign_hypotheses: list[CampaignHypothesis] = Field(default_factory=list)
     suppressed: bool
 
 

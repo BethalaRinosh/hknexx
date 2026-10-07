@@ -13,6 +13,7 @@ from .enrichment import enrich_events
 from .reconstructor import reconstruct
 from .models import (
     AnalysisResponse,
+    CampaignHypothesis,
     AttackStage,
     EvidenceItem,
     GraphEdge,
@@ -310,6 +311,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
     stage_defs = {key: _stage_config(detector_config, key) for key in REQUIRED_STAGES}
     watchlist = 0
     evidence_events: set[str] = set()
+    campaign_hypotheses: list[CampaignHypothesis] = []
 
     for cluster in clusters:
         login = _find(
@@ -400,6 +402,54 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
             )
 
         missing = [stage_defs[key]["name"] for key in REQUIRED_STAGES if not stage_events[key]]
+
+        hypothesis_chain = sorted(
+            {
+                event.event_id: event
+                for events_for_stage in stage_events.values()
+                for event in events_for_stage
+            }.values(),
+            key=lambda e: e.timestamp,
+        )
+        hypothesis_times = [
+            min(e.timestamp for e in stage_events[name])
+            for name in REQUIRED_STAGES
+            if stage_events[name]
+        ]
+        hypothesis_temporal_ok = (
+            bool(hypothesis_times)
+            and hypothesis_times == sorted(hypothesis_times)
+        )
+        hypothesis_entity_score = _entity_consistency(hypothesis_chain)
+        if len(stages) >= 2 or (len(stages) == 3 and not hypothesis_temporal_ok):
+            observed = [stage_defs[key]["name"] for key in REQUIRED_STAGES if stage_events[key]]
+            hypothesis_completeness = len(stages) / len(REQUIRED_STAGES)
+            hypothesis_confidence = round(
+                min(
+                    0.85,
+                    0.35 * hypothesis_completeness
+                    + 0.35 * hypothesis_entity_score
+                    + 0.30 * (1.0 if hypothesis_temporal_ok else 0.0),
+                ),
+                2,
+            )
+            campaign_hypotheses.append(
+                CampaignHypothesis(
+                    hypothesis_id=f"HYP-{hypothesis_chain[0].event_id if hypothesis_chain else len(campaign_hypotheses) + 1}",
+                    confidence=hypothesis_confidence,
+                    observed_stages=observed,
+                    missing_stages=missing,
+                    evidence_event_ids=[event.event_id for event in hypothesis_chain],
+                    temporal_valid=hypothesis_temporal_ok,
+                    entity_consistency_score=round(hypothesis_entity_score, 2),
+                    reason=(
+                        "Partial evidence supports a campaign hypothesis without "
+                        "meeting the validated-incident gate."
+                        if missing
+                        else "All stages are present, but temporal ordering prevents validation."
+                    ),
+                )
+            )
 
         if len(stages) < 3:
             if len(stages) >= 2:
@@ -542,6 +592,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
         suppressed_events=max(0, len(candidates) - len(evidence_events)),
         correlated_incidents=len(incidents),
         incidents=incidents,
+        campaign_hypotheses=campaign_hypotheses,
         suppressed=len(incidents) == 0,
     )
 
