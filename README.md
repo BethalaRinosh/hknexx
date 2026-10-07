@@ -195,6 +195,7 @@ The benchmark is synthetic and deterministic. It is a regression gate, not a pro
 | Phase 7 | Grounded LLM investigator | ✅ Complete |
 | Phase 8 | Public + raw CERT validation | ✅ Complete |
 | Phase 9 | Judge demo + CI hardening | ✅ Complete |
+| Phase 11 | Adversarial benchmark + campaign hypotheses | ✅ Complete |
 
 ## Phase 2 — False-positive battle
 
@@ -223,7 +224,7 @@ ATT&CK is enrichment only. An ATT&CK mapping cannot create or validate an incide
 
 ## Phase 6 — Deterministic attack reconstruction
 
-Validated incidents receive a causal reconstruction containing candidate stage evidence, temporal/entity compatibility, causal edges and reasons, selected event IDs, rejected decoys, reconstruction score, temporal validity and entity conflict count.
+Validated incidents receive a causal reconstruction containing candidate stage evidence, temporal/entity compatibility, causal edges and reasons, selected event IDs, rejected decoys, reconstruction score, temporal validity and entity conflict count. Normal correlation remains 30 minutes, while coherent long/slow campaigns may use a guarded 90-minute reconstruction horizon when strong identity continuity and independent corroboration are present.
 
 ## Phase 7 — Grounded LLM investigator
 
