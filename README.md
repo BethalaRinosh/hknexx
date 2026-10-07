@@ -40,6 +40,44 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 - Zeek conn / HTTP / DNS
 - Canonical SecurityEvent records
 
+## Current implementation roadmap
+
+| Task | Scope | Status |
+|---|---|---|
+| Task 1 | Centralized raw-event enrichment and rule-driven behavior signals | Complete |
+| Task 2 | File ingestion CLI, normalization/enrichment artifacts, reports, and upload API | Complete |
+| Task 3 | Config-driven attack stages and incident response templates | Complete |
+| Task 4 | Real CERT evaluation refinement | Next |
+| Task 5 | README and documentation hardening | Ongoing with every change |
+| Task 6 | Offline-safe investigator hardening | Planned |
+| Task 7 | Smaller defects and cleanup | Planned |
+
+The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
+
+## Recent implementation capabilities
+
+### Centralized enrichment
+
+Raw SecurityEvent records are enriched before detection using config/rules.yml. The enrichment layer derives signals such as unusual public IP usage, new-device activity, sensitive-resource access, large transfers, and removable-media destinations without overwriting explicit event metadata.
+
+### File ingestion and reproducible artifacts
+
+backend/cli.py provides file-based ingestion for JSON, JSONL, CSV, Windows, Sysmon, and Zeek telemetry. The pipeline can auto-detect supported formats, validate required fields, normalize records, run enrichment and detection, and emit reproducible artifacts:
+
+- normalized.jsonl
+- enriched.jsonl
+- incidents.json
+- report.md
+- run_summary.json
+
+The API also exposes POST /api/analyze/upload for multipart file analysis. config/schema.yml documents the configurable ingestion schema, while Makefile includes install, demo, test, and reproduce targets.
+
+### Config-driven stages and templates
+
+config/rules.yml now controls the display name, ATT&CK technique, confidence values, stage reasons, evidence reasons, incident title, and recommended response actions used by the deterministic detector. The detector retains internal stable stage keys so configuration changes do not alter correlation semantics.
+
+A custom YAML configuration can be passed to backend.detector.analyze(..., config=...), allowing stage presentation and incident response text to change without editing detector logic.
+
 ## Validation status
 
 | Phase | Scope | Status |
