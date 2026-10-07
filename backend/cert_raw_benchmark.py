@@ -22,6 +22,7 @@ class ScenarioWindow:
 
 @dataclass(frozen=True)
 class CERTEvent:
+    event_id: str
     user: str
     pc: str
     timestamp: datetime
@@ -109,6 +110,7 @@ def load_scenarios(answers_path: Path) -> list[ScenarioWindow]:
 def load_events(path: Path, source: str) -> list[CERTEvent]:
     events: list[CERTEvent] = []
     for row in _csv_dicts(path):
+        event_id = _norm(row.get("id")) or f"{source}:{len(events) + 1}"
         user = _norm(row.get("user"))
         timestamp_value = row.get("date") or row.get("timestamp") or ""
         if not user or not timestamp_value:
@@ -119,6 +121,7 @@ def load_events(path: Path, source: str) -> list[CERTEvent]:
         resource = _norm(row.get("filename") or row.get("resource"))
         events.append(
             CERTEvent(
+                event_id=event_id,
                 user=user,
                 pc=pc,
                 timestamp=timestamp,
@@ -184,7 +187,7 @@ def _case_chain(window: ScenarioWindow, events: list[CERTEvent]) -> RawCERTCaseR
     ordered = stage_identity and stage_sensitive and stage_exfil
 
     evidence = tuple(
-        event.timestamp.isoformat()
+        event.event_id
         for event in (identity, sensitive, exfil)
         if event is not None
     )
@@ -264,7 +267,12 @@ def evaluate_raw_cert(
         for window in benign_windows
     ]
     benign_chain_hits = sum(item.ordered_chain for item in benign_results)
-    compatible_malicious = ordered_hits
+    def is_project_compatible(item: RawCERTCaseResult) -> bool:
+        return item.stage_identity and item.stage_sensitive and item.stage_exfil
+
+    compatible_malicious = sum(
+        is_project_compatible(item) for item in malicious_results
+    )
     compatible_rate = round(compatible_malicious / malicious_n, 4)
     compatible_ordered_recall = (
         round(ordered_hits / compatible_malicious, 4) if compatible_malicious else 0.0
