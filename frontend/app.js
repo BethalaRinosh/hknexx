@@ -1,4 +1,6 @@
 const stats = document.getElementById("stats");
+const hypotheses = document.getElementById("hypotheses");
+const hypothesisPill = document.getElementById("hypothesisPill");
 const timeline = document.getElementById("timeline");
 const stages = document.getElementById("stages");
 const entities = document.getElementById("entities");
@@ -39,6 +41,35 @@ function stat(label, value, tone = "") {
 
 function pct(value) {
   return `${Math.round((Number(value) || 0) * 100)}%`;
+}
+
+
+function renderHypotheses(items) {
+  if (!items?.length) {
+    hypothesisPill.textContent = "NONE";
+    hypothesisPill.className = "pill safe";
+    hypotheses.innerHTML = '<div class="empty">No incomplete or contradictory campaign hypothesis was produced.</div>';
+    return;
+  }
+
+  const contradictory = items.some(item => !item.temporal_valid);
+  hypothesisPill.textContent = contradictory ? "REVIEW" : `${items.length} FOUND`;
+  hypothesisPill.className = contradictory ? "pill danger" : "pill";
+
+  hypotheses.innerHTML = items.map(item => `
+    <article class="hypothesis-card">
+      <div class="hypothesis-top">
+        <div><strong>${esc(item.hypothesis_id)}</strong><span>${pct(item.confidence)}</span></div>
+        <span class="pill ${item.temporal_valid ? "safe" : "danger"}">${item.temporal_valid ? "ORDERED" : "CONTRADICTORY"}</span>
+      </div>
+      <div class="hypothesis-stages">
+        <div><span>OBSERVED</span><b>${esc((item.observed_stages || []).join(" → ") || "None")}</b></div>
+        <div><span>MISSING</span><b>${esc((item.missing_stages || []).join(" · ") || "None")}</b></div>
+      </div>
+      <div class="chip-row">${(item.evidence_event_ids || []).map(id => `<span class="evidence-chip">${esc(id)}</span>`).join("")}</div>
+      <p>${esc(item.reason)}</p>
+    </article>
+  `).join("");
 }
 
 function renderGraph(nodes, edges) {
@@ -174,6 +205,7 @@ function render(data) {
     stat("Validated incidents", data.correlated_incidents, data.correlated_incidents ? "hot" : ""),
   ].join("");
 
+  renderHypotheses(data.campaign_hypotheses || []);
   const incident = data.incidents?.[0];
 
   if (!incident) {
