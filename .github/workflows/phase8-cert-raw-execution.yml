@@ -1,6 +1,8 @@
 name: Phase 8 Raw CERT Execution
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [phase8-cert-raw-execution]
   workflow_dispatch:
