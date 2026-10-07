@@ -68,6 +68,10 @@ The implementation workflow is tests-first: each task adds or updates regression
 
 The judge console was redesigned around a simple analyst workflow: run an analysis, see the current result, inspect the timeline and risk, verify stage evidence, then open deeper context only when needed. Advanced entity/ATT&CK context, live simulation, investigator tooling, validation metrics, and incomplete campaign hypotheses are grouped into collapsible sections. The visual system intentionally uses neutral surfaces, restrained status colors, and no gradients or decorative AI-style effects.
 
+### Tabbed judge console UI
+
+The judge console is organized into a compact task flow: **Overview** for the current incident, **Evidence** for incomplete campaigns and entities, **Reconstruction** for causal reasoning, **Intelligence** for ATT&CK and response, and **Tools** for live simulation, investigator output, and validation. The horizontal tab bar keeps advanced material out of the primary incident view while remaining one click away. Frontend navigation, loading/error states, WebSocket parsing, responsive alignment, and keyboard focus states are covered in the UI implementation.
+
 ### Centralized enrichment
 
 Raw SecurityEvent records are enriched before detection using config/rules.yml. The enrichment layer derives signals such as unusual public IP usage, new-device activity, sensitive-resource access, large transfers, and removable-media destinations without overwriting explicit event metadata.
