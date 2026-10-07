@@ -7,8 +7,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_make_reproduce_matches_checked_in_expected_summaries():
-    result = subprocess.run(["make", "demo"], cwd=ROOT, capture_output=True, text=True)
+def test_reproduce_demo_matches_checked_in_expected_summaries():
+    result = subprocess.run([sys.executable, "scripts/reproduce_demo.py"], cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
 
     for name in ("attack", "clean"):

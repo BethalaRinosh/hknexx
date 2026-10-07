@@ -52,6 +52,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 6 | Offline-safe investigator hardening | Complete |
 | Task 7 | Smaller defects and cleanup | Complete |
 | Task 8 | Realtime telemetry simulation and streaming dashboard | Complete |
+| Task 9 | Cross-platform demo reproduction and Windows workflow hardening | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -241,6 +242,7 @@ frontend/
 scripts/
   run_cert_raw_benchmark.py
   verify_cert_raw_layout.py
+  reproduce_demo.py
 
 tests/
   phase and regression tests
@@ -264,8 +266,10 @@ Python 3.10+ is recommended.
 ```bash
 python -m venv .venv
 
-# Windows
-.venv\\Scripts\\activate
+# Windows PowerShell
+.\\.venv\\Scripts\\Activate.ps1
+# Windows CMD
+.venv\\Scripts\\activate.bat
 # Linux/macOS
 source .venv/bin/activate
 
@@ -291,7 +295,17 @@ make test
 make reproduce
 ```
 
-`make demo` analyzes the committed attack and clean samples and writes artifacts under `out/demo/`. The pipeline emits `normalized.jsonl`, `enriched.jsonl`, `incidents.json`, `report.md`, and `run_summary.json`.
+`make demo` delegates to the cross-platform `scripts/reproduce_demo.py` helper, which analyzes the committed attack and clean samples and writes artifacts under `out/demo/`. The pipeline emits `normalized.jsonl`, `enriched.jsonl`, `incidents.json`, `report.md`, and `run_summary.json`.
+
+On Windows, Make is optional. The equivalent direct commands are:
+
+```powershell
+python scripts/reproduce_demo.py
+python -m pytest -q
+python -m pytest -q tests/test_task2_reproduce.py
+```
+
+The reproduction helper uses Python `pathlib`/`shutil` rather than shell-specific `rm -rf` or `mkdir -p`, so the same demo flow works from Windows PowerShell, Windows CMD, Linux, and macOS.
 
 ### File-based CLI
 

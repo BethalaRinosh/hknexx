@@ -6,10 +6,7 @@ install:
 	$(PYTHON) -m pip install -r requirements.txt
 
 demo:
-	@rm -rf out/demo
-	@mkdir -p out/demo
-	$(PYTHON) -m backend.cli analyze data/sample/attack.json --out out/demo/attack --config config/rules.yml
-	$(PYTHON) -m backend.cli analyze data/sample/clean.json --out out/demo/clean --config config/rules.yml
+	$(PYTHON) scripts/reproduce_demo.py
 
 test:
 	$(PYTHON) -m pytest -q
