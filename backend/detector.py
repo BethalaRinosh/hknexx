@@ -27,9 +27,9 @@ REQUIRED_STAGES = ("identity", "sensitive_access", "exfiltration")
 RULES_PATH = Path(__file__).resolve().parent.parent / "config" / "rules.yml"
 
 DEFAULT_STAGE_CONFIG = {
-    "identity": {"name": "Initial Access / Identity Anomaly", "technique": "T1078", "confidence": {"with_login_and_device": 0.88, "without_device": 0.76}, "reason": stage_defs["identity"]["reason"], "evidence_reasons": {"login": "Authentication from an unusual IP.", "device": "Previously unseen device associated with the session."}},
-    "sensitive_access": {"name": "Sensitive Data Access", "technique": "T1005", "confidence": 0.90, "reason": stage_defs["sensitive_access"]["reason"], "evidence_reason": "Sensitive resource accessed after the identity anomaly."},
-    "exfiltration": {"name": "Collection / Exfiltration", "technique": "T1052.001", "confidence": {"with_usb_and_copy": 0.96, "with_copy": 0.82, "usb_only": 0.60}, "reason": stage_defs["exfiltration"]["reason"], "evidence_reasons": {"usb": "Removable media was mounted during the correlated session.", "copy": "Large-volume transfer occurred during the correlated session."}},
+    "identity": {"name": "Initial Access / Identity Anomaly", "technique": "T1078", "confidence": {"with_login_and_device": 0.88, "without_device": 0.76}, "reason": "Authentication and device identity differ from the user's expected baseline.", "evidence_reasons": {"login": "Authentication from an unusual IP.", "device": "Previously unseen device associated with the session."}},
+    "sensitive_access": {"name": "Sensitive Data Access", "technique": "T1005", "confidence": 0.90, "reason": "A sensitive resource was accessed by the same correlated identity/device.", "evidence_reason": "Sensitive resource accessed after the identity anomaly."},
+    "exfiltration": {"name": "Collection / Exfiltration", "technique": "T1052.001", "confidence": {"with_usb_and_copy": 0.96, "with_copy": 0.82, "usb_only": 0.60}, "reason": "Removable-media presence and/or large-volume transfer provides collection/exfiltration evidence.", "evidence_reasons": {"usb": "Removable media was mounted during the correlated session.", "copy": "Large-volume transfer occurred during the correlated session."}},
 }
 DEFAULT_INCIDENT_TEMPLATE = {"title": "Suspected multi-stage data exfiltration", "recommended_actions": ["Disable or step-up authenticate the affected account.", "Isolate the correlated device from the network.", "Preserve endpoint, file and removable-media telemetry.", "Investigate the accessed sensitive resources and transfer destination."]}
 
@@ -328,7 +328,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                         )
                     ],
                     _entity_keys(sensitive),
-                    "A sensitive resource was accessed by the same correlated identity/device.",
+                    stage_defs["sensitive_access"]["reason"],
                 )
             )
 
