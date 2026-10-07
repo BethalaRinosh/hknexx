@@ -40,11 +40,14 @@ jobs:
               "https://www.kaggle.com/api/v1/datasets/download/andrihjonior/cert-insider-threat-dataset-r4-2?file_name=$encoded" \
               -o "$archive"
             test -s "$archive"
-            unzip -t "$archive" >/dev/null
-            local entry
-            entry="$(unzip -Z1 "$archive" | head -n 1)"
-            test -n "$entry"
-            unzip -p "$archive" "$entry" > "external/cert_raw/$output"
+            if unzip -t "$archive" >/dev/null 2>&1; then
+              local entry
+              entry="$(unzip -Z1 "$archive" | head -n 1)"
+              test -n "$entry"
+              unzip -p "$archive" "$entry" > "external/cert_raw/$output"
+            else
+              cp "$archive" "external/cert_raw/$output"
+            fi
             test -s "external/cert_raw/$output"
             rm -f "$archive"
           }
