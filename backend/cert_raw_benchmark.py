@@ -90,7 +90,6 @@ def load_scenarios(answers_path: Path) -> list[ScenarioWindow]:
         dataset = _norm(row.get("dataset"))
         if dataset not in {DATASET_VERSION, f"{DATASET_VERSION}.0"}:
             continue
-        event_id = _norm(row.get("id")) or f"{source}:{len(events) + 1}"
         user = _norm(row.get("user"))
         start = _parse_datetime(row.get("start", ""))
         end = _parse_datetime(row.get("end", ""))
