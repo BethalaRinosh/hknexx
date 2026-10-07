@@ -14,6 +14,10 @@ const pill = document.getElementById("statusPill");
 const scenarioSelect = document.getElementById("scenarioSelect");
 const phase2Report = document.getElementById("phase2Report");
 const phase2Pill = document.getElementById("phase2Pill");
+const liveBtn = document.getElementById("liveBtn");
+const liveStatus = document.getElementById("liveStatus");
+const liveStream = document.getElementById("liveStream");
+let liveSocket = null;
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"]/g, c => ({
@@ -233,6 +237,86 @@ function render(data) {
   renderResponse(incident.recommended_actions);
 }
 
+function setLiveStatus(label, tone = "") {
+  liveStatus.textContent = label;
+  liveStatus.className = tone ? `pill ${tone}` : "pill";
+}
+
+function appendLiveEvent(event, analysis) {
+  if (liveStream.querySelector(".empty")) liveStream.innerHTML = "";
+  const incident = analysis.incidents?.[0];
+  const row = document.createElement("div");
+  row.className = "live-event";
+  row.innerHTML = `
+    <div class="live-dot"></div>
+    <div class="live-event-main">
+      <div class="live-event-top">
+        <strong>${esc(pretty(event.event_type))}</strong>
+        <span>${esc(event.event_id)}</span>
+      </div>
+      <div class="muted">${esc(event.timestamp)} · ${esc(event.source)}</div>
+      <div class="event-meta">${[event.user, event.device, event.src_ip, event.resource].filter(Boolean).map(esc).join(" · ")}</div>
+    </div>
+    <span class="pill ${incident ? "danger" : "safe"}">${incident ? "INCIDENT" : "OBSERVED"}</span>
+  `;
+  liveStream.appendChild(row);
+  liveStream.scrollTop = liveStream.scrollHeight;
+}
+
+function stopLiveSimulation() {
+  if (liveSocket) {
+    liveSocket.close();
+    liveSocket = null;
+  }
+  liveBtn.textContent = "Start Live Simulation";
+  liveBtn.disabled = false;
+}
+
+function startLiveSimulation() {
+  if (liveSocket) return;
+  const scenario = scenarioSelect.value || "full_attack";
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const socketUrl = `${protocol}//${location.host}/ws/simulate/${encodeURIComponent(scenario)}?delay=0.9`;
+  liveStream.innerHTML = "";
+  setLiveStatus("CONNECTING");
+  liveBtn.textContent = "Stop Simulation";
+  liveSocket = new WebSocket(socketUrl);
+
+  liveSocket.onopen = () => setLiveStatus("STREAMING");
+  liveSocket.onmessage = (message) => {
+    const payload = JSON.parse(message.data);
+    if (payload.type === "start") {
+      setLiveStatus("STREAMING");
+      return;
+    }
+    if (payload.type === "event") {
+      appendLiveEvent(payload.event, payload.analysis);
+      render(payload.analysis);
+      return;
+    }
+    if (payload.type === "complete") {
+      render(payload.analysis);
+      setLiveStatus("COMPLETE", payload.analysis.correlated_incidents ? "danger" : "safe");
+      stopLiveSimulation();
+      return;
+    }
+    if (payload.type === "error") {
+      setLiveStatus("ERROR", "danger");
+      liveStream.innerHTML = `<div class="banner-danger"><b>STREAM ERROR</b><span>${esc(payload.message)}</span></div>`;
+      stopLiveSimulation();
+    }
+  };
+  liveSocket.onerror = () => {
+    setLiveStatus("ERROR", "danger");
+    liveStream.innerHTML = '<div class="banner-danger"><b>STREAM ERROR</b><span>Could not connect to the simulation stream.</span></div>';
+    stopLiveSimulation();
+  };
+  liveSocket.onclose = () => {
+    liveSocket = null;
+    if (liveBtn.textContent === "Stop Simulation") stopLiveSimulation();
+  };
+}
+
 async function load(path) {
   try {
     const res = await fetch(path);
@@ -278,12 +362,13 @@ async function loadScenarios() {
 }
 
 document.getElementById("attackBtn").onclick = () => load("/api/demo/full_attack");
+liveBtn.onclick = () => liveSocket ? stopLiveSimulation() : startLiveSimulation();
 document.getElementById("cleanBtn").onclick = () => load("/api/demo/clean");
 document.getElementById("scenarioBtn").onclick = () => load(`/api/demo/${encodeURIComponent(scenarioSelect.value)}`);
 
 loadScenarios();
 loadPhase2Report();
-load("/api/demo/full_attack");
+render({total_events:0,suspicious_events:0,watchlist_candidates:0,correlated_incidents:0,incidents:[],suppressed:true});
 
 document.getElementById("uploadBtn").onclick = async () => {
   const input = document.getElementById("logFile");
