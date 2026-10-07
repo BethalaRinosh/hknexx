@@ -33,8 +33,12 @@ def test_slow_attack_uses_guarded_drift_window():
 
 def test_long_spacing_without_strong_identity_is_not_reconstructed():
     events = load_scenario("slow_attack")
-    events[1] = events[1].model_copy(
-        update={"user": "different-user", "device": "DEV-99"}
+    events[1] = SecurityEvent.model_validate(
+        events[1].model_dump(
+            mode="json",
+            round_trip=True,
+        )
+        | {"user": "different-user", "device": "DEV-99"}
     )
 
     reconstruction = reconstruct(events)
