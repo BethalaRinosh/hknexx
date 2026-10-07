@@ -78,11 +78,10 @@ def test_reversed_attack_order_is_not_validated():
     assert result.suppressed is True
 
 
-def test_slow_attack_outside_window_is_not_validated():
+def test_slow_attack_with_strong_continuity_is_validated():
     result = analyze(load_scenarios()["slow_attack"])
-    assert result.correlated_incidents == 0
-    assert result.watchlist_candidates == 1
-    assert result.suppressed is True
+    assert result.correlated_incidents == 1
+    assert result.suppressed is False
 
 
 def test_large_benign_backup_does_not_equal_exfiltration():

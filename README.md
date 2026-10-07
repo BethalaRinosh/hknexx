@@ -141,6 +141,19 @@ These controls reduce uncontrolled resource consumption at the file-ingestion bo
 
 The end-to-end pipeline now preserves configuration semantics and evidence chronology across ingestion and detection. Nested stage overrides retain unspecified defaults, explicit enrichment flags are honored by the detector, malformed transfer metadata fails closed, configured transfer thresholds are authoritative, device-enrollment signals are not backdated, untrusted event types are escaped before dashboard rendering, and Windows XML exports may contain multiple events.
 
+### Drift-aware causal reconstruction
+
+The deterministic reconstruction layer keeps the normal 30-minute correlation window, but can reconstruct a coherent long/slow campaign for up to **90 minutes** when strong identity continuity is present and an independent continuity signal supports the transition.
+
+A long-spacing edge requires:
+- the same user plus the same device or session;
+- resource/removable-media continuity or a behavior-baseline score of at least 0.50;
+- chronological event ordering.
+
+A broad time window alone cannot stitch unrelated users, devices or benign telemetry together. Alternate stage candidates remain recorded as decoys, while the selected path exposes causal edge scores and reasons.
+
+The existing detector APIs and evidence-grounding boundaries are unchanged.
+
 ### Config-driven stages and templates
 
 config/rules.yml now controls the display name, ATT&CK technique, confidence values, stage reasons, evidence reasons, incident title, and recommended response actions used by the deterministic detector. The detector retains internal stable stage keys so configuration changes do not alter correlation semantics.

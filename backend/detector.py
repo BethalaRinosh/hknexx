@@ -22,6 +22,7 @@ from .models import (
 )
 
 CHAIN_WINDOW = timedelta(minutes=30)
+DRIFT_CHAIN_WINDOW = timedelta(minutes=90)
 CANDIDATE_THRESHOLD = 0.10
 STRONG_SIGNAL_THRESHOLD = 0.25
 REQUIRED_STAGES = ("identity", "sensitive_access", "exfiltration")
@@ -122,22 +123,49 @@ def _event_score(event: SecurityEvent) -> float:
 
 
 def _cluster(events: list[SecurityEvent]) -> list[list[SecurityEvent]]:
+    """Group candidate telemetry with a tight default window and guarded drift window."""
     events = sorted(events, key=lambda e: e.timestamp)
     clusters: list[list[SecurityEvent]] = []
 
     for event in events:
         placed = False
         for cluster in clusters:
-            if event.timestamp - cluster[0].timestamp > CHAIN_WINDOW:
+            if event.timestamp - cluster[0].timestamp > DRIFT_CHAIN_WINDOW:
                 continue
-            if any(
-                event.timestamp >= existing.timestamp
-                and _identity_compatible(event, existing)
+
+            compatible_existing = [
+                existing
                 for existing in cluster
-            ):
-                cluster.append(event)
-                placed = True
-                break
+                if event.timestamp >= existing.timestamp
+                and _identity_compatible(event, existing)
+            ]
+            if not compatible_existing:
+                continue
+
+            strong_drift_link = any(
+                existing.user
+                and event.user
+                and existing.user == event.user
+                and (
+                    (existing.device and event.device and existing.device == event.device)
+                    or (
+                        existing.session_id
+                        and event.session_id
+                        and existing.session_id == event.session_id
+                    )
+                )
+                for existing in compatible_existing
+            )
+
+            gap = event.timestamp - max(
+                existing.timestamp for existing in compatible_existing
+            )
+            if gap > CHAIN_WINDOW and not strong_drift_link:
+                continue
+
+            cluster.append(event)
+            placed = True
+            break
 
         if not placed:
             clusters.append([event])

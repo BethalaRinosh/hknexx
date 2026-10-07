@@ -67,7 +67,8 @@ def test_reversed_order_has_no_valid_causal_path():
     assert result.temporal_valid is False
 
 
-def test_slow_attack_is_not_reconstructed_across_window():
+def test_slow_attack_is_reconstructed_with_guarded_drift_support():
     result = reconstruct(load_scenario("slow_attack"))
-    assert result.selected_event_ids == []
-    assert result.temporal_valid is False
+    assert result.selected_event_ids == ["SLOW-001", "SLOW-002", "SLOW-004"]
+    assert result.temporal_valid is True
+    assert result.reconstruction_score >= 0.65
