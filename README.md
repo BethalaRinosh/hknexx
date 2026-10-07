@@ -1,68 +1,176 @@
 # Evidence-First Cyber Threat Intelligence
 
-HNX26PSI03 — AI-Powered Cyber Threat Intelligence
+**HNX26PSI03 — AI-Powered Cyber Threat Intelligence**
 
-A lightweight, explainable attack-reconstruction engine that correlates security events across users, devices, IPs, applications, files and removable media.
+An explainable, evidence-first attack reconstruction engine that correlates heterogeneous security telemetry across users, devices, IPs, applications, files and removable media.
 
-## Core idea
+> **An anomaly is not an incident. An incident requires a coherent, evidence-backed multi-stage attack chain.**
 
-The system does **not** raise an incident because one event looks unusual.
+## What the system does
 
-It first:
+```
+Security Logs → Event Normalization → Entity Resolution → Behavior Signals
+→ Temporal / Entity Correlation → Attack-Stage Reasoner → Evidence Coverage
+→ Campaign Confidence → Incident / Silent → Timeline + Evidence + ATT&CK + Response
+```
 
-1. normalizes heterogeneous security events;
-2. resolves entities;
-3. scores individual behavioral anomalies;
-4. builds temporal relationships;
-5. identifies a multi-stage attack chain;
-6. verifies evidence for every stage;
-7. calculates incident confidence;
-8. stays silent when the evidence is insufficient;
-9. produces a human-readable incident story and recommended response.
+The incident-validation boundary is deterministic. ATT&CK is enrichment, and the optional LLM investigator runs only after deterministic validation.
 
 ## Demo attack
 
-Compromised account → unusual login → new device → sensitive file access → USB mount → large data copy.
-
-## Architecture
-
 ```
-Security Logs
-    ↓
-Event Normalization
-    ↓
-Entity Resolution
-    ↓
-Behavior Signals
-    ↓
-Temporal / Entity Correlation
-    ↓
-Attack-Stage Reasoner
-    ↓
-Evidence Coverage
-    ↓
-Campaign Confidence
-    ↓
-Incident / Silent
-    ↓
-Timeline + Evidence + ATT&CK + Response
+Compromised Account → Unusual Login → New Device → Sensitive File Access
+→ USB / Removable Media Mount → Large Data Copy to USB → Validated Incident
 ```
+
+## Evidence-first security model
+
+- **Event anomaly score:** how unusual is one event?
+- **Campaign confidence:** how strongly do related events form a coherent attack?
+- **ATT&CK enrichment:** which known technique describes validated behavior?
+- **LLM investigation:** how can validated evidence be explained to an analyst?
+
+The LLM cannot create or validate an incident. Every validated stage must contain actual evidence IDs. Telemetry is treated as untrusted data, never as instructions. Entity conflicts, invalid temporal ordering and incomplete chains fail closed.
+
+## Supported telemetry
+
+- Windows Security 4624 / 4663
+- Windows XML
+- Sysmon 1 / 3 / 11 / 22
+- Zeek conn / HTTP / DNS
+- Canonical SecurityEvent records
+
+## Validation status
+
+| Phase | Scope | Status |
+|---|---|---|
+| Phase 1 | Core detection | ✅ Complete |
+| Phase 2 | False-positive benchmark | ✅ Complete |
+| Phase 3 | Heterogeneous log adapters | ✅ Complete |
+| Phase 4 | Behavioral baseline | ✅ Complete |
+| Phase 5 | MITRE ATT&CK intelligence | ✅ Complete |
+| Phase 6 | Deterministic attack reconstruction | ✅ Complete |
+| Phase 7 | Grounded LLM investigator | ✅ Complete |
+| Phase 8 | Public + raw CERT validation | ✅ Complete |
+| Phase 9 | Judge demo + CI hardening | ✅ Complete |
+
+## Phase 2 — False-positive battle
+
+The scenario benchmark contains 13 cases covering malicious chains and benign lookalikes.
+
+- **0 false positives**
+- **0 missed validated attacks**
+- All expected dispositions passed
+
+Controls include authorized transfers, large benign backups, shared-IP collisions, ordinary sensitive-file access, standalone USB activity, partial chains, reversed ordering and slow campaigns.
+
+## Phase 4 — Behavioral baseline
+
+The behavior layer tracks historical patterns for source IPs, devices, applications, event types, activity hours and daily volume. Behavior novelty increases suspicion but cannot independently become campaign confidence.
+
+## Phase 5 — MITRE ATT&CK
+
+The project uses a pinned **MITRE ATT&CK Enterprise v19.2** catalog.
+
+Current demo mappings:
+- **T1078 — Valid Accounts**
+- **T1005 — Data from Local System**
+- **T1052.001 — Exfiltration over USB**
+
+ATT&CK is enrichment only. An ATT&CK mapping cannot create or validate an incident.
+
+## Phase 6 — Deterministic attack reconstruction
+
+Validated incidents receive a causal reconstruction containing candidate stage evidence, temporal/entity compatibility, causal edges and reasons, selected event IDs, rejected decoys, reconstruction score, temporal validity and entity conflict count.
+
+## Phase 7 — Grounded LLM investigator
+
+The optional investigator runs **after** deterministic incident validation. Its sealed evidence packet contains the validated incident, reconstruction, ATT&CK enrichment and timeline. Claims must cite real event IDs and are checked by a deterministic validator. Missing provider configuration fails closed; there is no synthetic fallback.
+
+## Phase 8 — Public dataset validation
+
+Phase 8 has two distinct validation tracks.
+
+### Public derived validation
+
+Public security telemetry is normalized and evaluated without committing large raw corpora to Git. The harness reports source coverage and normalization results and fails closed when the expected real artifact is unavailable.
+
+### Raw CERT r4.2 benchmark
+
+The project executed the **raw CERT Insider Threat Test Dataset r4.2** benchmark using raw logon, device and file data plus the official answer-key data.
+
+Verified raw file row counts:
+
+- logon.csv: **854,859**
+- device.csv: **405,380**
+- file.csv: **445,581**
+- insiders.csv: **191**
+- malicious scenarios: **70**
+
+Raw benchmark result:
+
+| Metric | Result |
+|---|---:|
+| Malicious scenarios | 70 |
+| Project-compatible scenarios | 3 / 70 |
+| Compatibility rate | **4.29%** |
+| Identity-stage proxy recall | **100.00%** |
+| Sensitive-stage proxy recall | **5.71%** |
+| Exfil-stage proxy recall | **4.29%** |
+| Ordered-chain proxy recall | **4.29%** |
+| Compatible ordered-chain recall | **100.00%** |
+| Benign windows sampled | 300 |
+| Benign proxy chains | 7 |
+| Benign proxy-chain rate | **2.33%** |
+
+**Important:** 4.29% is a dataset/project compatibility rate, not end-to-end detector recall over all 70 malicious scenarios. Only 3 CERT malicious scenarios matched the current identity → sensitive file activity → removable-media evidence contract. All 3 compatible scenarios completed the ordered chain.
+
+Relevant implementation:
+- `docs/CERT_RAW_ACQUISITION.md`
+- `docs/PHASE8_CERT_RAW_GATE.md`
+- `backend/cert_raw_benchmark.py`
+- `scripts/run_cert_raw_benchmark.py`
+- `scripts/verify_cert_raw_layout.py`
+
+## Phase 9 — Judge demo
+
+The judge dashboard exposes detection, campaign risk, attack timeline, entity graph, stage-by-stage evidence, deterministic reconstruction, selected evidence, rejected decoys, ATT&CK intelligence, response actions, validation status and benign suppression.
+
+The Phase 9 CI gate verifies frontend JavaScript syntax, the full-attack judge contract, clean-control suppression, adversarial partial-chain suppression and the complete pytest regression suite.
+
+Phase 9 hardening was merged after the relevant Phase 2–8 and Phase 9 checks passed.
 
 ## Project structure
 
 ```
 backend/
-  main.py              FastAPI API + static dashboard serving
-  models.py            Pydantic event/result models
-  detector.py          Detection, correlation and evidence engine
+  main.py
+  models.py
+  detector.py
+  cert_raw_benchmark.py
+  evaluator.py
   data/
-    attack_logs.json   Controlled multi-stage attack
-    clean_logs.json    Benign baseline
+
 frontend/
   index.html
   app.js
   style.css
-requirements.txt
+
+scripts/
+  run_cert_raw_benchmark.py
+  verify_cert_raw_layout.py
+
+tests/
+  phase and regression tests
+
+docs/
+  detection and phase specifications
+  validation reports
+  CERT raw acquisition/gate documentation
+
+.github/workflows/
+  phase2.yml ... phase9.yml
+  phase8-cert-raw.yml
 ```
 
 ## Run locally
@@ -71,8 +179,9 @@ Python 3.10+ is recommended.
 
 ```bash
 python -m venv .venv
+
 # Windows
-.venv\Scripts\activate
+.venv\\Scripts\\activate
 # Linux/macOS
 source .venv/bin/activate
 
@@ -80,166 +189,42 @@ pip install -r requirements.txt
 uvicorn backend.main:app --reload
 ```
 
-Open http://127.0.0.1:8000
+Open `http://127.0.0.1:8000`.
 
-API:
-- GET /health
-- GET /api/demo/attack
-- GET /api/demo/clean
-- POST /api/analyze — normalized events
-- POST /api/analyze/raw — heterogeneous/raw events
-- GET /api/incidents
+### API
 
-## Validation scenarios
+- `GET /health`
+- `GET /api/demo/attack`
+- `GET /api/demo/clean`
+- `POST /api/analyze`
+- `POST /api/analyze/raw`
+- `POST /api/analyze/behavior`
+- `POST /api/reconstruct`
+- `POST /api/investigate`
+- `GET /api/incidents`
 
-The dashboard includes repeatable scenarios for full attacks, benign activity, partial chains, entity mismatches, reversed ordering, slow campaigns, and large benign backups. The goal is to demonstrate that the detector does not turn every anomaly into an incident.
+## Validation commands
 
-See `docs/DETECTION_SPEC.md` for the exact scoring, correlation window, stage requirements and disposition rules.
+```bash
+python -m pytest -q
+python -m pytest -q tests/test_phase9_judge_demo.py
+node --check frontend/app.js
+```
 
-## Phase 4 — Behavior baseline layer
+## Data and provenance
 
-The system now learns lightweight per-user/device historical baselines for source IPs, devices, applications, event types, activity hours, and daily activity volume.
+Demo scenarios are intentionally small and controlled so the complete attack chain can be reproduced during a hackathon demonstration. Public validation is kept separate from committed demo data, and large raw datasets are not committed to the repository.
 
-Behavior anomaly scores are explicitly separated from campaign confidence. A novel IP or device can raise suspicion, but a validated incident still requires the existing multi-stage evidence chain, temporal ordering, entity consistency and corroborating evidence.
+Raw CERT r4.2 execution uses externally acquired data and an official answer-key source. The repository contains the acquisition, layout-validation and benchmark logic rather than the raw corpus itself.
 
-The behavior API accepts historical normalized events plus current events at `POST /api/analyze/behavior` and returns per-event scores and human-readable reasons.
+## Design constraints
 
-See `docs/PHASE4_SPEC.md` for the gate and false-positive policy.
+The project intentionally avoids anomaly-only incident generation, ATT&CK-only detection, LLM-generated incidents, synthetic public-dataset validation, unsupported evidence references, entity-conflict incidents and temporally impossible attack chains.
 
-## Current detection philosophy
-
-### Event score
-How unusual is the individual event?
-
-### Campaign score
-How strongly does the event participate in a coherent attack chain?
-
-An unusual event alone is not an incident.
-
-The MVP requires multiple related events with:
-- consistent user/device/entity linkage;
-- valid temporal order;
-- sufficient attack-stage coverage;
-- evidence references for every inferred stage.
-
-## Evidence-first output
-
-Every attack stage contains:
-- stage name
-- confidence
-- supporting event IDs
-- involved entities
-- reason
-
-The UI can therefore answer **why** an incident was raised instead of presenting a black-box alert.
-
-## Phase 5 — Grounded ATT&CK intelligence
-## Phase 6 — Temporal attack reconstruction
-## Phase 7 — Grounded LLM investigator
-## Phase 8 — Public dataset validation
-
-The validation harness now accepts public security telemetry without storing the raw corpus in Git.
-
-Current public targets are ATLASv2 EDR and an OTRF Security Datasets Windows collection. Each source has a manifest entry, local artifact environment variable, source URL and expected evaluation mode.
-
-The harness reports record/normalization coverage and ATT&CK labels when supplied by the public source. It **fails closed** when the real artifact is missing; no synthetic fallback is treated as public-data validation.
-
-See `docs/PHASE8_SPEC.md` and `backend/data/public_dataset_manifest.json`.
-
-
-The project now has an optional LLM investigator that runs **after** deterministic incident validation and attack reconstruction.
-
-The LLM receives a sealed evidence packet containing the validated incident, reconstruction, ATT&CK enrichment and incident timeline. External telemetry is explicitly treated as untrusted data.
-
-Every factual, inferential and recommendation claim must cite actual event IDs. A deterministic validator rejects unknown or uncited evidence references.
-
-Production configuration uses `LLM_BASE_URL` and `LLM_MODEL`, with optional `LLM_API_KEY`. There is no synthetic fallback; missing provider configuration fails closed.
-
-`POST /api/investigate` exposes the investigator.
-
-See `docs/PHASE7_SPEC.md` for the security boundary and validation gate.
-
-
-Validated incidents now include a deterministic causal reconstruction layer. Candidate stage evidence is converted into an identity- and time-aware graph, feasible paths are scored, and the highest-scoring minimal attack skeleton is retained.
-
-The reconstruction records edge reasons, reconstruction confidence, temporal validity, identity conflicts and non-selected attack-like decoys. The minimal path can therefore explain the causal backbone without pretending every nearby event is part of the attack.
-
-`POST /api/reconstruct` exposes the reconstruction engine directly.
-
-See `docs/PHASE6_SPEC.md` for the path-scoring and adversarial gate.
-
-
-Validated incidents are now enriched with a pinned **MITRE ATT&CK Enterprise v19.2** catalog. Each mapping includes the technique/sub-technique, tactic, ATT&CK version, Detection Strategy, selected analytics, evidence event IDs, rationale and mapping confidence.
-
-The current demo maps:
-- T1078 — Valid Accounts
-- T1005 — Data from Local System
-- T1052.001 — Exfiltration over USB
-
-ATT&CK remains enrichment only. It cannot create or validate an incident without the evidence-first chain.
-
-See `docs/PHASE5_SPEC.md` and `backend/data/attack_intelligence.json`.
-
-## Threat intelligence enrichment
-
-MITRE ATT&CK technique IDs are attached as enrichment after behavioral detection. The detector is not dependent on ATT&CK rules.
-
-Planned mappings for the demo:
-- T1078 — Valid Accounts
-- T1083 — File and Directory Discovery
-- T1005 — Data from Local System
-- T1025 — Data from Removable Media
-
-## Data
-
-The initial demo data is synthetic and intentionally small so the complete chain can be reproduced during a hackathon demonstration.
-
-Research validation can later use public provenance/IDS datasets such as NODLINK/PIDSMaker datasets without changing the normalized event interface.
-
-## Phase 2 validation
-
-The project contains a scenario-based false-positive benchmark in `backend/data/phase2_manifest.json` and an evaluator in `backend/evaluator.py`.
-
-The benchmark intentionally includes benign lookalikes such as:
-- authorized administrative transfers;
-- large backup operations;
-- shared-IP collisions;
-- ordinary sensitive-file access;
-- standalone USB activity;
-- partial chains;
-- reversed temporal order.
-
-The detector must produce the expected disposition for every case before Phase 3 begins.
-
-## MVP vs stretch
-
-### MVP
-- heterogeneous event normalization
-- temporal correlation
-- user/device/IP/application linking
-- multi-stage attack reconstruction
-- evidence coverage
-- risk/confidence
-- clean-log suppression
-- dashboard
-
-### Stretch
-- Isolation Forest / lightweight ML anomaly model
-- Sigma rule ingestion
-- OCSF-native adapters
-- public provenance dataset evaluation
-- ATT&CK navigator export
-- LLM incident summarization grounded strictly in event IDs
-- real-time streaming ingestion
+**Evidence first, explanation second.**
 
 ## Resource declaration
 
-The project is designed to use:
-- Python
-- FastAPI
-- Pydantic
-- Uvicorn
-- synthetic security logs for the initial demo
-- MITRE ATT&CK identifiers as threat-intelligence enrichment
+Core stack: Python, FastAPI, Pydantic, Uvicorn, deterministic correlation/reconstruction, MITRE ATT&CK enrichment, optional grounded LLM investigation, and a JavaScript/HTML/CSS dashboard.
 
-No proprietary evaluation data is used.
+No proprietary evaluation data is committed to the repository.
