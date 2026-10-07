@@ -55,6 +55,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 9 | Cross-platform demo reproduction and Windows workflow hardening | Complete |
 | Task 10 | Upload resource and input hardening | Complete |
 | Task 11 | API route-order hardening and endpoint regression coverage | Complete |
+| Task 12 | Windows XML encoding compatibility | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -331,7 +332,7 @@ Analyze supported telemetry directly without starting the API:
 python -m backend.cli analyze <input-file> --out out/run --format auto --config config/rules.yml
 ```
 
-Supported formats are JSON, JSONL/NDJSON, CSV, Windows JSON/XML, Sysmon JSON, and Zeek JSON. For generic JSON/JSONL/CSV inputs, `config/schema.yml` can map source column names to canonical `SecurityEvent` fields.
+Supported formats are JSON, JSONL/NDJSON, CSV, Windows JSON/XML, Sysmon JSON, and Zeek JSON. Windows XML input accepts UTF-8 and UTF-16 exports. For generic JSON/JSONL/CSV inputs, `config/schema.yml` can map source column names to canonical `SecurityEvent` fields.
 
 Example:
 
