@@ -132,3 +132,37 @@ def test_llm_timeout_is_bounded(monkeypatch):
     monkeypatch.setenv("LLM_TIMEOUT", "301")
     with pytest.raises(InvestigatorConfigurationError, match="no more than 300"):
         _timeout_seconds()
+
+
+def test_simulated_investigator_uses_real_evidence_and_is_labeled():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/investigate/simulated",
+        json={"events": [event.model_dump(mode="json") for event in load_attack()]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["provider"] == "simulation"
+    assert body["model"] == "deterministic-demo"
+    assert body["grounded"] is True
+    assert body["claims"]
+    allowed = {event.event_id for event in load_attack()}
+    for claim in body["claims"]:
+        assert set(claim["evidence_event_ids"]).issubset(allowed)
+
+
+def test_simulated_investigator_requires_validated_incident():
+    from fastapi.testclient import TestClient
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/investigate/simulated",
+        json={"events": [event.model_dump(mode="json") for event in load_attack()[:2]]},
+    )
+
+    assert response.status_code == 422

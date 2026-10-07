@@ -58,6 +58,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 12 | Windows XML encoding compatibility | Complete |
 | Task 13 | API event-count resource limits | Complete |
 | Task 14 | LLM provider configuration hardening | Complete |
+| Task 15 | Labeled simulated investigator demo | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -103,6 +104,18 @@ The live simulation endpoint is:
 `WS /ws/simulate/{scenario}?delay=<seconds>`
 
 For example, the dashboard's **Start Live Simulation** control runs the selected scenario with a visible 0.9-second event cadence. The normal file upload and batch APIs remain available.
+
+### Simulated investigator demo
+
+The dashboard can now run a clearly labeled **simulated investigator** after a deterministic incident is validated. It does not call a model and is not a fallback for the real LLM provider. Instead, it transforms the already-validated incident stages and their real event IDs into the same grounded `InvestigationReport` schema used by the provider path.
+
+This gives the hackathon demo a visible evidence → investigation step while preserving the security boundary:
+
+- provider: `simulation`;
+- model: `deterministic-demo`;
+- claims are still passed through the normal grounding validator;
+- unknown or unsupported evidence cannot be invented by the simulator;
+- the real `POST /api/investigate` provider path remains unchanged.
 
 ### API event limits
 
@@ -367,7 +380,7 @@ The CLI fails closed on unsupported schemas and reports the fields it found plus
 - `POST /api/analyze/zeek`
 - `POST /api/analyze/behavior`
 - `POST /api/reconstruct`
-- `POST /api/investigate`
+- `POST /api/investigate`\n- `POST /api/investigate/simulated` — explicitly labeled deterministic demo investigator
 - `GET /api/phase2/report`
 - `GET /api/incidents`
 

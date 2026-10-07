@@ -20,6 +20,7 @@ from .evaluator import run_phase2
 from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, InvestigationReport, InvestigationRequest, Phase2Report, SecurityEvent
 from .normalizer import normalize_events
 from .realtime import simulate_event_stream
+from .simulated_investigator import simulate_investigation
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "backend" / "data"
@@ -277,6 +278,33 @@ def analyze_zeek(payload: dict) -> AnalysisResponse:
     _enforce_event_limit(events, "/api/analyze/zeek")
     normalized = [normalize_zeek_event(event, stream=stream, index=i) for i, event in enumerate(events)]
     return analyze(normalized)
+
+
+@app.post("/api/investigate/simulated", response_model=InvestigationReport)
+def investigate_simulated(payload: InvestigationRequest) -> InvestigationReport:
+    if not payload.events:
+        raise HTTPException(status_code=400, detail="events must not be empty")
+    _enforce_event_limit(payload.events, "/api/investigate/simulated")
+
+    analysis = analyze(payload.events)
+    if not analysis.incidents:
+        raise HTTPException(
+            status_code=422,
+            detail="no validated incident is available for simulated investigation",
+        )
+
+    incident = next(
+        (
+            item
+            for item in analysis.incidents
+            if payload.incident_id is None or item.incident_id == payload.incident_id
+        ),
+        None,
+    )
+    if incident is None:
+        raise HTTPException(status_code=404, detail="incident_id not found")
+
+    return simulate_investigation(incident)
 
 
 @app.post("/api/investigate", response_model=InvestigationReport)
