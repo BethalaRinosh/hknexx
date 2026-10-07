@@ -182,6 +182,10 @@ python -m backend.adversarial
 
 The benchmark is synthetic and deterministic. It is a regression gate, not a production-world accuracy claim.
 
+### Confidence drift and final robustness
+
+The regression suite now checks confidence separation between complete attacks and partial hypotheses, duplicate-telemetry deduplication, reversed-input invariance and large benign haystacks. The corresponding methodology is documented in `docs/PHASE12_CONFIDENCE_DRIFT.md` and `docs/PHASE14_FINAL_ROBUSTNESS.md`.
+
 ## Validation status
 
 | Phase | Scope | Status |
