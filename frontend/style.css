@@ -39,3 +39,11 @@ button.primary{border-color:#4577ff;background:#1b4fd1;color:white}
 select{border:1px solid #263044;background:#111827;color:#dbe5f5;border-radius:10px;padding:10px 12px}
 @media(max-width:1100px){.validation-grid,.recon-edge{grid-template-columns:repeat(3,1fr)}.stage-grid,.response-grid{grid-template-columns:repeat(2,1fr)}.recon-edge{grid-template-columns:1fr}}
 @media(max-width:900px){.hero{align-items:flex-start;flex-direction:column}.judge-strip,.stats,.grid{grid-template-columns:1fr}.span-2{grid-column:auto}.stage-grid,.response-grid{grid-template-columns:1fr}.banner-danger,.banner-safe{flex-direction:column}h1{font-size:30px}}
+
+.live-panel{margin-bottom:12px}
+.live-stream{max-height:300px;overflow:auto;display:grid;gap:8px;padding-right:3px}
+.live-event{display:grid;grid-template-columns:10px 1fr auto;gap:11px;align-items:center;background:#0a0f18;border:1px solid #202a3d;border-radius:12px;padding:11px 12px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#64a4ff;box-shadow:0 0 0 4px #193052}
+.live-event-main{min-width:0}
+.live-event-top{display:flex;justify-content:space-between;gap:12px}
+.live-event-top span{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#7f8ca4;font-size:10px}
