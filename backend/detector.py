@@ -412,11 +412,12 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
             key=lambda e: e.timestamp,
         )
         hypothesis_times = [
-            min((e.timestamp for e in stage_events[name]), default=None)
+            min(e.timestamp for e in stage_events[name])
             for name in REQUIRED_STAGES
+            if stage_events[name]
         ]
         hypothesis_temporal_ok = (
-            all(t is not None for t in hypothesis_times)
+            bool(hypothesis_times)
             and hypothesis_times == sorted(hypothesis_times)
         )
         hypothesis_entity_score = _entity_consistency(hypothesis_chain)
