@@ -214,7 +214,8 @@ def _entity_consistency(events: list[SecurityEvent]) -> float:
 
 
 def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
-    ordered = sorted(events, key=lambda e: e.timestamp)
+    enriched = enrich_events(list(events))
+    ordered = sorted(enriched, key=lambda e: e.timestamp)
     scored = [(event, _event_score(event)) for event in ordered]
 
     # Weak context events participate in correlation, but don't inflate the
