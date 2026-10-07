@@ -160,6 +160,10 @@ config/rules.yml now controls the display name, ATT&CK technique, confidence val
 
 A custom YAML configuration can be passed to backend.detector.analyze(..., config=...), allowing stage presentation and incident response text to change without editing detector logic.
 
+### Judge-console hypothesis view
+
+The dashboard now surfaces campaign hypotheses as a first-class judge-console panel. Each card shows bounded confidence, observed stages, missing stages, temporal validity and the exact supporting event IDs. This makes incomplete evidence inspectable without visually conflating it with a validated incident.
+
 ### Campaign hypotheses
 
 Incomplete or contradictory evidence can now produce an explicit `campaign_hypotheses` result without becoming a validated incident. Each hypothesis records observed stages, missing stages, real supporting event IDs, temporal validity, entity-consistency score and a bounded confidence value. This keeps watchlist reasoning inspectable instead of collapsing it into a counter.
