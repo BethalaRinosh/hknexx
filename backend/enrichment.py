@@ -33,6 +33,16 @@ def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
     return any(address in ipaddress.ip_network(item) for item in ranges)
 
 
+def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
+    if not value:
+        return False
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return any(address in ipaddress.ip_network(item) for item in ranges)
+
+
 def _contains_token(value: Any, tokens: list[str]) -> bool:
     text = str(value or "").lower()
     return any(token.lower() in text for token in tokens)
@@ -60,7 +70,7 @@ def enrich_events(
         public_ip_rule = rules.get("suspicious_public_ip", {})
         if public_ip_rule.get("enabled", True) and event.event_type == "login" and "unusual_ip" not in metadata:
             previous_ips = seen_ips.get(user, set())
-            metadata["unusual_ip"] = bool(event.src_ip and event.src_ip not in previous_ips)
+            metadata["unusual_ip"] = bool(event.src_ip and event.src_ip not in previous_ips and not _is_private_ip(event.src_ip, public_ip_rule.get("private_ranges", [])))
         if event.src_ip and user:
             seen_ips.setdefault(user, set()).add(event.src_ip)
 
