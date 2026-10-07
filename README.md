@@ -292,6 +292,26 @@ python -m backend.cli analyze data/sample/attack.json --out out/attack --config 
 The CLI fails closed on unsupported schemas and reports the fields it found plus the canonical fields/aliases it expects.
 
 
+## API
+
+- `GET /health`
+- `GET /api/scenarios`
+- `GET /api/demo/{scenario}`
+- `GET /api/demo/attack`
+- `GET /api/demo/clean`
+- `POST /api/analyze`
+- `POST /api/analyze/upload`
+- `POST /api/analyze/raw`
+- `POST /api/analyze/windows`
+- `POST /api/analyze/windows/xml`
+- `POST /api/analyze/sysmon`
+- `POST /api/analyze/zeek`
+- `POST /api/analyze/behavior`
+- `POST /api/reconstruct`
+- `POST /api/investigate`
+- `GET /api/phase2/report`
+- `GET /api/incidents`
+
 ## Validation commands
 
 ```bash
