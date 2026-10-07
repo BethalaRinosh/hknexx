@@ -125,6 +125,15 @@ def detect_format(path: Path, payload: Any | None = None) -> str:
     return "json"
 
 
+def _read_windows_xml(path: Path) -> str:
+    raw = path.read_bytes()
+    if raw.startswith((b"\\xff\\xfe", b"\\xfe\\xff")):
+        return raw.decode("utf-16")
+    if raw.startswith(b"\\xef\\xbb\\xbf"):
+        return raw.decode("utf-8-sig")
+    return raw.decode("utf-8")
+
+
 def parse_file(
     path: str | Path,
     format_name: str = "auto",
@@ -162,7 +171,7 @@ def parse_file(
         return normalize_events(records)
 
     if format_name == "windows":
-        text = source.read_text(encoding="utf-8")
+        text = _read_windows_xml(source)
         if text.lstrip().startswith("<"):
             try:
                 return normalize_windows_events_xml(text)
