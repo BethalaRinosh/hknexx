@@ -181,3 +181,29 @@ def test_phase2_manifest_has_zero_false_positives_and_missed_attacks():
     assert report.failed_cases == 0
     assert report.false_positive_cases == 0
     assert report.missed_attack_cases == 0
+
+
+def test_raw_attack_without_preset_flags_is_validated():
+    from backend.normalizer import normalize_events
+
+    raw = [
+        {"event_id":"RAW-A1","timestamp":"2026-10-06T09:12:00Z","event_type":"login","user":"alice","device":"DEV-07","src_ip":"185.12.22.14","application":"IdentityPortal","source":"auth","severity":"medium"},
+        {"event_id":"RAW-A2","timestamp":"2026-10-06T09:17:00Z","event_type":"file_access","user":"alice","device":"DEV-07","src_ip":"185.12.22.14","application":"FileServer","resource":"/finance/acquisition.pdf","action":"read","source":"file_server","severity":"high"},
+        {"event_id":"RAW-A3","timestamp":"2026-10-06T09:20:00Z","event_type":"usb_mount","user":"alice","device":"DEV-07","src_ip":"185.12.22.14","application":"EndpointManager","resource":"USB-44","action":"mount","source":"endpoint","severity":"high"},
+        {"event_id":"RAW-A4","timestamp":"2026-10-06T09:21:00Z","event_type":"file_copy","user":"alice","device":"DEV-07","src_ip":"185.12.22.14","application":"FileExplorer","resource":"/finance/acquisition.pdf","action":"copy_to_usb","source":"endpoint","severity":"critical","metadata":{"bytes":2400000000,"destination":"USB-44"}},
+    ]
+    result = analyze(normalize_events(raw))
+    assert result.correlated_incidents == 1
+
+
+def test_raw_clean_log_without_preset_flags_stays_silent():
+    from backend.normalizer import normalize_events
+
+    raw = [
+        {"event_id":"RAW-C1","timestamp":"2026-10-06T08:30:00Z","event_type":"login","user":"bob","device":"DEV-02","src_ip":"10.0.0.21","application":"IdentityPortal","source":"auth","severity":"info"},
+        {"event_id":"RAW-C2","timestamp":"2026-10-06T08:45:00Z","event_type":"file_access","user":"bob","device":"DEV-02","src_ip":"10.0.0.21","application":"FileServer","resource":"/team/project-plan.docx","action":"read","source":"file_server","severity":"info"},
+        {"event_id":"RAW-C3","timestamp":"2026-10-06T09:10:00Z","event_type":"usb_mount","user":"bob","device":"DEV-02","src_ip":"10.0.0.21","application":"EndpointManager","resource":"USB-12","action":"mount","source":"endpoint","severity":"info"},
+    ]
+    result = analyze(normalize_events(raw))
+    assert result.correlated_incidents == 0
+    assert result.suppressed is True
