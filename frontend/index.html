@@ -16,6 +16,7 @@
       </div>
       <div class="controls">
         <button id="attackBtn" class="primary">Run Judge Demo</button>
+        <button id="liveBtn">Start Live Simulation</button>
         <button id="cleanBtn">Run Clean</button>
         <label class="file-upload"><input id="logFile" type="file" accept=".json,.jsonl,.ndjson,.csv,.xml" /><span>Choose Log</span></label>
         <button id="uploadBtn">Analyze File</button>
@@ -27,6 +28,17 @@
       <div><span>PROOF</span><strong>Event-ID evidence</strong></div>
       <div><span>INTELLIGENCE</span><strong>MITRE ATT&CK</strong></div>
       <div><span>CONTROL</span><strong>Benign suppression</strong></div>
+    </section>
+
+    <section class="panel live-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Live Telemetry Stream</h2>
+          <div class="muted">Simulation mode feeds canonical telemetry one event at a time into the same enrichment and detection pipeline.</div>
+        </div>
+        <span id="liveStatus" class="pill">READY</span>
+      </div>
+      <div id="liveStream" class="live-stream"><div class="empty">No live stream running. Start the simulation to watch the chain build in real time.</div></div>
     </section>
 
     <section class="panel scenario-panel">

@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from math import isfinite
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -17,6 +18,7 @@ from .reconstructor import reconstruct
 from .evaluator import run_phase2
 from .models import AnalysisResponse, BehaviorAnalysisResponse, BehaviorSignalResponse, InvestigationReport, InvestigationRequest, Phase2Report, SecurityEvent
 from .normalizer import normalize_events
+from .realtime import simulate_event_stream
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "backend" / "data"
@@ -73,6 +75,65 @@ def demo_scenario(scenario: str) -> AnalysisResponse:
 @app.get("/api/demo/attack", response_model=AnalysisResponse)
 def demo_attack() -> AnalysisResponse:
     return analyze(load_events("attack_logs.json"))
+
+
+@app.websocket("/ws/simulate/{scenario}")
+async def simulate_scenario(websocket: WebSocket, scenario: str) -> None:
+    await websocket.accept()
+    try:
+        available = load_scenarios()
+        if scenario not in available:
+            await websocket.send_json({"type": "error", "message": f"unknown scenario: {scenario}"})
+            return
+
+        try:
+            delay = float(websocket.query_params.get("delay", "1.0"))
+        except (TypeError, ValueError):
+            delay = 1.0
+        if not isfinite(delay):
+            delay = 1.0
+        delay = max(0.0, min(delay, 10.0))
+
+        await websocket.send_json({
+            "type": "start",
+            "scenario": scenario,
+            "mode": "simulation",
+            "delay_seconds": delay,
+            "message": "Simulated telemetry stream started.",
+        })
+
+        accumulated: list[SecurityEvent] = []
+        async for event in simulate_event_stream(available[scenario], delay_seconds=delay):
+            accumulated.append(event)
+            analysis = analyze(accumulated)
+            await websocket.send_json({
+                "type": "event",
+                "event": event.model_dump(mode="json"),
+                "analysis": analysis.model_dump(mode="json"),
+                "event_count": len(accumulated),
+            })
+
+        final_analysis = analyze(accumulated)
+        await websocket.send_json({
+            "type": "complete",
+            "scenario": scenario,
+            "analysis": final_analysis.model_dump(mode="json"),
+            "event_count": len(accumulated),
+            "message": "Simulated telemetry stream completed.",
+        })
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        try:
+            await websocket.send_json({"type": "error", "message": str(exc)})
+        except Exception:
+            pass
+    finally:
+        try:
+            if websocket.client_state.name != "DISCONNECTED":
+                await websocket.close()
+        except Exception:
+            pass
 
 
 @app.get("/api/demo/clean", response_model=AnalysisResponse)
