@@ -29,7 +29,7 @@ def simulate_investigation(incident: Incident) -> InvestigationReport:
     first = evidence_refs[0] if evidence_refs else incident.timeline[0].event_id
     summary = (
         f"Simulated investigator synthesis: the validated incident contains "
-        f"{len(incident.stages)} supported attack stages, beginning with evidence [{first]}. "
+        f"{len(incident.stages)} supported attack stages, beginning with evidence [{first}]. "
         f"The deterministic engine reports {incident.confidence:.0%} campaign confidence."
     )
 
