@@ -240,7 +240,8 @@ def _entity_consistency(events: list[SecurityEvent]) -> float:
 
 
 def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
-    enriched = enrich_events(list(events), config=config)
+    detector_config = _load_detector_config(config)
+    enriched = enrich_events(list(events), config=detector_config)
     ordered = sorted(enriched, key=lambda e: e.timestamp)
     scored = [(event, _event_score(event)) for event in ordered]
 
@@ -262,6 +263,8 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
 
     clusters = _cluster(candidates)
     incidents: list[Incident] = []
+    incident_template = _incident_template(detector_config)
+    stage_defs = {key: _stage_config(detector_config, key) for key in REQUIRED_STAGES}
     watchlist = 0
     evidence_events: set[str] = set()
 
@@ -282,9 +285,9 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
         authorized_context = sum(1 for e in cluster if _context_is_authorized(e))
 
         stage_events: dict[str, list[SecurityEvent]] = {
-            REQUIRED_STAGES[0]: [e for e in (login, new_device) if e],
-            REQUIRED_STAGES[1]: [sensitive] if sensitive else [],
-            REQUIRED_STAGES[2]: [e for e in (usb, copy) if e],
+            "identity": [e for e in (login, new_device) if e],
+            "sensitive_access": [sensitive] if sensitive else [],
+            "exfiltration": [e for e in (usb, copy) if e],
         }
 
         stages: list[AttackStage] = []
