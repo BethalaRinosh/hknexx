@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Callable, Iterable
 
 from .attack_intel import enrich_technique, validate_emitted_techniques
+from .enrichment import enrich_events
 from .reconstructor import reconstruct
 from .models import (
     AnalysisResponse,
