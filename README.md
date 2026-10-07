@@ -310,6 +310,12 @@ backend/
   main.py
   models.py
   detector.py
+  reconstructor.py
+  behavior.py
+  enrichment.py
+  realtime.py
+  simulated_investigator.py
+  adversarial.py
   cert_raw_benchmark.py
   evaluator.py
   data/
@@ -326,9 +332,13 @@ scripts/
 
 tests/
   phase and regression tests
+  adversarial and robustness regression tests
 
 docs/
   detection and phase specifications
+  Phase 11 adversarial benchmark
+  Phase 12 confidence drift
+  Phase 14 final robustness
   validation reports
   CERT raw acquisition/gate documentation
 
@@ -435,6 +445,7 @@ python -m pytest -q
 python -m pytest -q tests/test_phase9_judge_demo.py
 python -m pytest -q tests/test_phase11_adversarial.py tests/test_campaign_hypotheses.py tests/test_confidence_robustness.py
 python -m backend.adversarial
+# Optional local frontend syntax check if Node.js is installed
 node --check frontend/app.js
 ```
 
