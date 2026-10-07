@@ -255,7 +255,7 @@ def run_pipeline(
 
     normalized = parse_file(path, format_name=format_name, schema=schema)
     enriched = enrich_events(normalized, config=config)
-    analysis = analyze(enriched)
+    analysis = analyze(normalized, config=config)
 
     _write_jsonl(output / "normalized.jsonl", normalized)
     _write_jsonl(output / "enriched.jsonl", enriched)
