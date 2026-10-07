@@ -207,3 +207,34 @@ def test_raw_clean_log_without_preset_flags_stays_silent():
     result = analyze(normalize_events(raw))
     assert result.correlated_incidents == 0
     assert result.suppressed is True
+
+
+def test_enrichment_derives_flags_without_overwriting_explicit_metadata():
+    from backend.enrichment import enrich_events
+
+    events = [
+        SecurityEvent(event_id="E1", timestamp="2026-10-06T09:00:00Z", event_type="login",
+                      user="alice", device="DEV-07", src_ip="185.12.22.14",
+                      application="IdentityPortal", source="auth", metadata={}),
+        SecurityEvent(event_id="E2", timestamp="2026-10-06T09:02:00Z", event_type="device_enroll",
+                      user="alice", device="DEV-07", src_ip="185.12.22.14",
+                      application="EndpointManager", source="endpoint", metadata={}),
+        SecurityEvent(event_id="E3", timestamp="2026-10-06T09:04:00Z", event_type="file_access",
+                      user="alice", device="DEV-07", src_ip="185.12.22.14",
+                      application="FileServer", resource="/finance/acquisition.pdf",
+                      source="file_server", metadata={}),
+        SecurityEvent(event_id="E4", timestamp="2026-10-06T09:05:00Z", event_type="file_copy",
+                      user="alice", device="DEV-07", src_ip="185.12.22.14",
+                      application="FileExplorer", action="copy_to_usb", source="endpoint",
+                      metadata={"bytes": 2_000_000_000, "destination": "USB-44",
+                               "unusual_ip": False}),
+    ]
+
+    enriched = enrich_events(events)
+
+    assert enriched[0].metadata["unusual_ip"] is True
+    assert enriched[0].metadata["new_device"] is True
+    assert enriched[2].metadata["sensitive"] is True
+    assert enriched[3].metadata["large_transfer"] is True
+    assert enriched[3].metadata["removable_destination"] is True
+    assert enriched[3].metadata["unusual_ip"] is False
