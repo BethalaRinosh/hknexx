@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Callable, Iterable
@@ -42,10 +43,19 @@ def _load_detector_config(config: Any = None) -> dict[str, Any]:
     with Path(config).open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle) or {}
 
-def _stage_config(config: dict[str, Any], key: str) -> dict[str, Any]:
-    merged = dict(DEFAULT_STAGE_CONFIG[key])
-    merged.update(config.get("stages", {}).get(key, {}))
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
     return merged
+
+
+def _stage_config(config: dict[str, Any], key: str) -> dict[str, Any]:
+    override = config.get("stages", {}).get(key, {})
+    return _deep_merge(DEFAULT_STAGE_CONFIG[key], override)
 
 def _incident_template(config: dict[str, Any]) -> dict[str, Any]:
     merged = dict(DEFAULT_INCIDENT_TEMPLATE)
@@ -91,8 +101,11 @@ def _event_score(event: SecurityEvent) -> float:
     if event.event_type == "usb_mount" and event.metadata.get("removable", True):
         score += 0.12
     if event.event_type == "file_copy":
-        copied_bytes = int(event.metadata.get("bytes", 0) or 0)
-        if copied_bytes >= 1_000_000_000:
+        try:
+            copied_bytes = int(event.metadata.get("bytes", 0) or 0)
+        except (TypeError, ValueError):
+            copied_bytes = 0
+        if event.metadata.get("large_transfer") is True:
             score += 0.50
         elif copied_bytes >= 250_000_000:
             score += 0.20
@@ -139,19 +152,18 @@ def _find(cluster: list[SecurityEvent], predicate: Callable[[SecurityEvent], boo
 def _is_removable_exfil(event: SecurityEvent) -> bool:
     if event.event_type != "file_copy":
         return False
-    copied_bytes = int(event.metadata.get("bytes", 0) or 0)
-    if copied_bytes < 1_000_000_000:
+    try:
+        copied_bytes = int(event.metadata.get("bytes", 0) or 0)
+    except (TypeError, ValueError):
+        copied_bytes = 0
+    if event.metadata.get("large_transfer") is not True and copied_bytes < 1_000_000_000:
         return False
+    if "removable_destination" in event.metadata:
+        return bool(event.metadata["removable_destination"])
 
     destination = str(event.metadata.get("destination", "")).lower()
     action = str(event.action or "").lower()
-    return (
-        "usb" in destination
-        or "removable" in destination
-        or "usb" in action
-        or "removable" in action
-        or bool(event.metadata.get("removable_destination"))
-    )
+    return "usb" in destination or "removable" in destination or "usb" in action or "removable" in action
 
 
 def _context_is_authorized(event: SecurityEvent) -> bool:
