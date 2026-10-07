@@ -200,6 +200,8 @@ The regression suite now checks confidence separation between complete attacks a
 | Phase 8 | Public + raw CERT validation | ✅ Complete |
 | Phase 9 | Judge demo + CI hardening | ✅ Complete |
 | Phase 11 | Adversarial benchmark + campaign hypotheses | ✅ Complete |
+| Phase 12 | Confidence drift robustness | ✅ Complete |
+| Phase 14 | Final robustness stress | ✅ Complete |
 
 ## Phase 2 — False-positive battle
 
@@ -331,6 +333,7 @@ docs/
   CERT raw acquisition/gate documentation
 
 .github/workflows/
+  ci.yml
   phase2.yml ... phase9.yml
   phase8-cert-raw.yml
 ```
@@ -420,7 +423,8 @@ The CLI fails closed on unsupported schemas and reports the fields it found plus
 - `POST /api/analyze/zeek`
 - `POST /api/analyze/behavior`
 - `POST /api/reconstruct`
-- `POST /api/investigate`\n- `POST /api/investigate/simulated` — explicitly labeled deterministic demo investigator
+- `POST /api/investigate`
+- `POST /api/investigate/simulated` — explicitly labeled deterministic demo investigator
 - `GET /api/phase2/report`
 - `GET /api/incidents`
 
@@ -429,6 +433,8 @@ The CLI fails closed on unsupported schemas and reports the fields it found plus
 ```bash
 python -m pytest -q
 python -m pytest -q tests/test_phase9_judge_demo.py
+python -m pytest -q tests/test_phase11_adversarial.py tests/test_campaign_hypotheses.py tests/test_confidence_robustness.py
+python -m backend.adversarial
 node --check frontend/app.js
 ```
 
