@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -12,15 +13,26 @@ ROOT = Path(__file__).resolve().parent.parent
 RULES_PATH = ROOT / "config" / "rules.yml"
 
 
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = deepcopy(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
 def _load_rules(config: str | Path | dict[str, Any] | None = None) -> dict[str, Any]:
+    with RULES_PATH.open("r", encoding="utf-8") as handle:
+        defaults = yaml.safe_load(handle) or {}
     if config is None:
-        path = RULES_PATH
-        with path.open("r", encoding="utf-8") as handle:
-            return yaml.safe_load(handle) or {}
+        return defaults
     if isinstance(config, dict):
-        return config
+        return _deep_merge(defaults, config)
     with Path(config).open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle) or {}
+        override = yaml.safe_load(handle) or {}
+    return _deep_merge(defaults, override)
 
 
 def _is_private_ip(value: str | None, ranges: list[str]) -> bool:
