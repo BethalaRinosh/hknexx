@@ -50,7 +50,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 4 | Real CERT evaluation refinement with scenario-level compatibility diagnostics | Complete |
 | Task 5 | README and documentation hardening | Ongoing with every change |
 | Task 6 | Offline-safe investigator hardening | Complete |
-| Task 7 | Smaller defects and cleanup | Planned |
+| Task 7 | Smaller defects and cleanup | Complete |
 
 The implementation workflow is tests-first: each task adds or updates regression coverage, runs the full pytest -q suite and CI validation, then is merged only after the relevant gates pass.
 
@@ -287,34 +287,6 @@ python -m backend.cli analyze data/sample/attack.json --out out/attack --config 
 
 The CLI fails closed on unsupported schemas and reports the fields it found plus the canonical fields/aliases it expects.
 
-
-Python 3.10+ is recommended.
-
-```bash
-python -m venv .venv
-
-# Windows
-.venv\\Scripts\\activate
-# Linux/macOS
-source .venv/bin/activate
-
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
-```
-
-Open `http://127.0.0.1:8000`.
-
-### API
-
-- `GET /health`
-- `GET /api/demo/attack`
-- `GET /api/demo/clean`
-- `POST /api/analyze`
-- `POST /api/analyze/raw`
-- `POST /api/analyze/behavior`
-- `POST /api/reconstruct`
-- `POST /api/investigate`
-- `GET /api/incidents`
 
 ## Validation commands
 

@@ -311,7 +311,7 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                         for e in stage_evidence
                     ],
                     set().union(*(_entity_keys(e) for e in stage_evidence)),
-                    "Authentication and device identity differ from the user's expected baseline.",
+                    stage_defs["identity"]["reason"],
                 )
             )
 
@@ -352,11 +352,10 @@ def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
                         for e in exfil_events
                     ],
                     set().union(*(_entity_keys(e) for e in exfil_events)),
-                    "Removable-media presence and/or large-volume transfer provides collection/exfiltration evidence.",
+                    stage_defs["exfiltration"]["reason"],
                 )
             )
 
-        found = {stage.stage for stage in stages}
         missing = [stage_defs[key]["name"] for key in REQUIRED_STAGES if not stage_events[key]]
 
         if len(stages) < 3:
