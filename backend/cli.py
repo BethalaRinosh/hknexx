@@ -14,6 +14,7 @@ from .adapters import (
     normalize_sysmon_event,
     normalize_windows_event,
     normalize_windows_event_xml,
+    normalize_windows_events_xml,
     normalize_zeek_event,
 )
 from .detector import analyze
@@ -164,7 +165,7 @@ def parse_file(
         text = source.read_text(encoding="utf-8")
         if text.lstrip().startswith("<"):
             try:
-                return [normalize_windows_event_xml(text)]
+                return normalize_windows_events_xml(text)
             except ET.ParseError as exc:
                 raise PipelineInputError(f"invalid Windows XML in {source}: {exc}") from exc
         records = _records_from_json(source)

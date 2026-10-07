@@ -160,3 +160,37 @@ def test_generic_normalizer_preserves_expanded_identity_fields():
     assert event.process == "chrome.exe"
     assert event.pid == 1234
     assert event.session_id == "0x555"
+
+
+def test_windows_xml_export_with_multiple_events_is_supported():
+    xml = """<Events xmlns="http://schemas.microsoft.com/win/2004/08/events/event">
+      <Event>
+        <System>
+          <EventID>4624</EventID>
+          <TimeCreated SystemTime="2026-10-06T19:10:00Z"/>
+          <Computer>WIN-DC01</Computer>
+        </System>
+        <EventData>
+          <Data Name="TargetUserName">alice</Data>
+          <Data Name="IpAddress">203.0.113.55</Data>
+        </EventData>
+      </Event>
+      <Event>
+        <System>
+          <EventID>4624</EventID>
+          <TimeCreated SystemTime="2026-10-06T19:11:00Z"/>
+          <Computer>WIN-DC02</Computer>
+        </System>
+        <EventData>
+          <Data Name="TargetUserName">bob</Data>
+          <Data Name="IpAddress">203.0.113.56</Data>
+        </EventData>
+      </Event>
+    </Events>"""
+
+    from backend.adapters import normalize_windows_events_xml
+
+    events = normalize_windows_events_xml(xml)
+    assert len(events) == 2
+    assert events[0].user == "alice"
+    assert events[1].user == "bob"

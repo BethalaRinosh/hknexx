@@ -120,8 +120,7 @@ def normalize_windows_event(raw: dict[str, Any], index: int = 0) -> SecurityEven
     )
 
 
-def normalize_windows_event_xml(xml_text: str, index: int = 0) -> SecurityEvent:
-    root = ET.fromstring(xml_text)
+def _normalize_windows_xml_node(root: ET.Element, index: int = 0) -> SecurityEvent:
     namespaces = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
 
     system = root.find("e:System", namespaces)
@@ -149,6 +148,34 @@ def normalize_windows_event_xml(xml_text: str, index: int = 0) -> SecurityEvent:
         {"System": system_map, "EventData": data_map},
         index=index,
     )
+
+
+def normalize_windows_events_xml(xml_text: str) -> list[SecurityEvent]:
+    root = ET.fromstring(xml_text)
+    namespaces = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
+
+    if root.tag.endswith("Event"):
+        nodes = [root]
+    else:
+        nodes = root.findall(".//e:Event", namespaces)
+
+    if not nodes:
+        raise ET.ParseError("Windows XML contains no Event elements")
+
+    return [_normalize_windows_xml_node(node, index=i) for i, node in enumerate(nodes)]
+
+
+def normalize_windows_event_xml(xml_text: str, index: int = 0) -> SecurityEvent:
+    root = ET.fromstring(xml_text)
+    namespaces = {"e": "http://schemas.microsoft.com/win/2004/08/events/event"}
+    if root.tag.endswith("Event"):
+        node = root
+    else:
+        nodes = root.findall(".//e:Event", namespaces)
+        if not nodes:
+            raise ET.ParseError("Windows XML contains no Event elements")
+        node = nodes[0]
+    return _normalize_windows_xml_node(node, index=index)
 
 
 def normalize_sysmon_event(raw: dict[str, Any], index: int = 0) -> SecurityEvent:
