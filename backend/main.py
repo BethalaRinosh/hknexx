@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from math import isfinite
 
-from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket
+from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -87,7 +88,9 @@ async def simulate_scenario(websocket: WebSocket, scenario: str) -> None:
 
         try:
             delay = float(websocket.query_params.get("delay", "1.0"))
-        except ValueError:
+        except (TypeError, ValueError):
+            delay = 1.0
+        if not isfinite(delay):
             delay = 1.0
         delay = max(0.0, min(delay, 10.0))
 
@@ -118,10 +121,16 @@ async def simulate_scenario(websocket: WebSocket, scenario: str) -> None:
             "event_count": len(accumulated),
             "message": "Simulated telemetry stream completed.",
         })
+    except WebSocketDisconnect:
+        return
     except Exception as exc:
-        await websocket.send_json({"type": "error", "message": str(exc)})
+        try:
+            await websocket.send_json({"type": "error", "message": str(exc)})
+        except Exception:
+            pass
     finally:
-        await websocket.close()
+        if websocket.application_state.value < 2:
+            await websocket.close()
 
 
 @app.get("/api/demo/clean", response_model=AnalysisResponse)
