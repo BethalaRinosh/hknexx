@@ -160,6 +160,12 @@ config/rules.yml now controls the display name, ATT&CK technique, confidence val
 
 A custom YAML configuration can be passed to backend.detector.analyze(..., config=...), allowing stage presentation and incident response text to change without editing detector logic.
 
+### Campaign hypotheses
+
+Incomplete or contradictory evidence can now produce an explicit `campaign_hypotheses` result without becoming a validated incident. Each hypothesis records observed stages, missing stages, real supporting event IDs, temporal validity, entity-consistency score and a bounded confidence value. This keeps watchlist reasoning inspectable instead of collapsing it into a counter.
+
+The validated-incident gate is unchanged: hypotheses cannot create an incident, ATT&CK mapping or investigator request by themselves.
+
 ### Phase 11 — Adversarial benchmark
 
 The project now includes a reproducible adversarial benchmark harness at `backend/adversarial.py`. It measures validated-incident precision, recall, F1, false-positive rate and false-negative rate across noisy telemetry, out-of-order input, decoys, missing telemetry, identity collisions, authorized workflows, benign backups and partial chains. Incomplete malicious evidence is tracked as watchlist evidence instead of being inflated into validated recall.
