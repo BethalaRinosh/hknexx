@@ -213,8 +213,8 @@ def _entity_consistency(events: list[SecurityEvent]) -> float:
     return round(sum(scores) / len(scores), 2)
 
 
-def analyze(events: Iterable[SecurityEvent]) -> AnalysisResponse:
-    enriched = enrich_events(list(events))
+def analyze(events: Iterable[SecurityEvent], config=None) -> AnalysisResponse:
+    enriched = enrich_events(list(events), config=config)
     ordered = sorted(enriched, key=lambda e: e.timestamp)
     scored = [(event, _event_score(event)) for event in ordered]
 
