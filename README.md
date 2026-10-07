@@ -160,6 +160,18 @@ config/rules.yml now controls the display name, ATT&CK technique, confidence val
 
 A custom YAML configuration can be passed to backend.detector.analyze(..., config=...), allowing stage presentation and incident response text to change without editing detector logic.
 
+### Phase 11 — Adversarial benchmark
+
+The project now includes a reproducible adversarial benchmark harness at `backend/adversarial.py`. It measures validated-incident precision, recall, F1, false-positive rate and false-negative rate across noisy telemetry, out-of-order input, decoys, missing telemetry, identity collisions, authorized workflows, benign backups and partial chains. Incomplete malicious evidence is tracked as watchlist evidence instead of being inflated into validated recall.
+
+Run it with:
+
+```text
+python -m backend.adversarial
+```
+
+The benchmark is synthetic and deterministic. It is a regression gate, not a production-world accuracy claim.
+
 ## Validation status
 
 | Phase | Scope | Status |
