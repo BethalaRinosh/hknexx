@@ -51,6 +51,8 @@ def test_reconstruction_retains_decoy_candidates():
                 "event_id": "DECOY-SENSITIVE",
                 "timestamp": "2026-10-06T09:16:00Z",
                 "resource": "/finance/payroll.xlsx",
+                "user": "decoy-user",
+                "device": "DECOY-01",
             }
         )
     )
