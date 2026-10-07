@@ -47,7 +47,7 @@ The LLM cannot create or validate an incident. Every validated stage must contai
 | Task 1 | Centralized raw-event enrichment and rule-driven behavior signals | Complete |
 | Task 2 | File ingestion CLI, normalization/enrichment artifacts, reports, and upload API | Complete |
 | Task 3 | Config-driven attack stages and incident response templates | Complete |
-| Task 4 | Real CERT evaluation refinement | Next |
+| Task 4 | Real CERT evaluation refinement with scenario-level compatibility diagnostics | Complete |
 | Task 5 | README and documentation hardening | Ongoing with every change |
 | Task 6 | Offline-safe investigator hardening | Planned |
 | Task 7 | Smaller defects and cleanup | Planned |
@@ -71,6 +71,12 @@ backend/cli.py provides file-based ingestion for JSON, JSONL, CSV, Windows, Sysm
 - run_summary.json
 
 The API also exposes POST /api/analyze/upload for multipart file analysis. config/schema.yml documents the configurable ingestion schema, while Makefile includes install, demo, test, and reproduce targets.
+
+### CERT evaluation diagnostics
+
+The raw CERT evaluator now preserves a result for every malicious scenario and classifies its project compatibility as `compatible`, `missing_identity`, `missing_sensitive_access`, or `missing_exfiltration`. The aggregate result also exposes a compatibility breakdown, making the 70-scenario coverage boundary auditable instead of hiding it behind a single percentage.
+
+This remains a project-specific proxy evaluation. CERT raw telemetry does not directly provide every field used by the production detector, so the benchmark does not claim end-to-end detector recall.
 
 ### Config-driven stages and templates
 
