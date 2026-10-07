@@ -1,36 +1,34 @@
 {
   "dataset": "CERT Insider Threat Test Dataset r4.2",
+  "canonical_source": "Carnegie Mellon University Software Engineering Institute",
+  "doi": "10.1184/R1/12841247.v1",
+  "execution_mirror": "Kaggle public dataset andrihjonior/cert-insider-threat-dataset-r4-2",
   "malicious_scenarios": 70,
   "compatible_malicious_scenarios": 3,
   "compatibility_rate": 0.0429,
   "complete_malicious_scenarios": 3,
   "ordered_malicious_scenarios": 3,
-  "identity_recall": 1,
+  "identity_recall": 1.0,
   "sensitive_recall": 0.0571,
   "exfil_recall": 0.0429,
   "ordered_chain_recall": 0.0429,
-  "compatible_ordered_chain_recall": 1,
+  "compatible_ordered_chain_recall": 1.0,
   "benign_windows_sampled": 300,
   "benign_ordered_chains": 7,
   "benign_chain_rate": 0.0233,
   "status": "validated",
   "raw_source_files": {
-    "logon.csv": {
-      "rows": 854859,
-      "bytes": 58514706
-    },
-    "device.csv": {
-      "rows": 405380,
-      "bytes": 28982749
-    },
-    "file.csv": {
-      "rows": 445581,
-      "bytes": 193055265
-    },
-    "insiders.csv": {
-      "data_rows": 190,
-      "bytes": 13792
-    }
+    "logon.csv": {"rows": 854859, "bytes": 58514706},
+    "device.csv": {"rows": 405380, "bytes": 28982749},
+    "file.csv": {"rows": 445581, "bytes": 193055265},
+    "insiders.csv": {"data_rows": 191, "bytes": 13792}
   },
-  "workflow_run": 37516637334
+  "workflow_run": 37574902964,
+  "artifact_id": 11462541036,
+  "interpretation": {
+    "detector_recall_claim": false,
+    "summary": "Only 3 of 70 CERT r4.2 malicious scenario windows directly fit the current identity -> file activity -> removable-media chain semantics. All 3 compatible windows satisfy the ordered proxy chain.",
+    "why": "CERT raw sources do not directly encode the project's src_ip, new_device, or sensitive-resource metadata semantics.",
+    "benign_result": "300 sampled non-malicious-user windows; 7 formed the proxy chain. This is not a benign census."
+  }
 }
