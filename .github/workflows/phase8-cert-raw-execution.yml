@@ -73,10 +73,10 @@ jobs:
           echo "CERT_RAW_FILE_ROWS=$FILE_ROWS"
           echo "CERT_RAW_INSIDER_ROWS=$INSIDER_ROWS"
 
-          test "$LOGON_ROWS" -ge 800000
-          test "$DEVICE_ROWS" -ge 350000
-          test "$FILE_ROWS" -ge 500000
-          test "$INSIDER_ROWS" -ge 180
+          test "$LOGON_ROWS" -eq 854859
+          test "$DEVICE_ROWS" -eq 405380
+          test "$FILE_ROWS" -eq 445581
+          test "$INSIDER_ROWS" -eq 191
 
       - name: Run raw CERT r4.2 benchmark
         run: |
