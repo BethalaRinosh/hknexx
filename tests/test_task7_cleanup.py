@@ -17,6 +17,15 @@ def test_configured_stage_reasons_are_used_for_all_stage_evidence():
             metadata={"unusual_ip": True, "new_device": True},
         ),
         SecurityEvent(
+            event_id="T7-DEVICE",
+            timestamp=datetime(2026, 1, 1, 10, 2, tzinfo=timezone.utc),
+            event_type="device_enroll",
+            user="alice",
+            device="laptop-7",
+            source="test",
+            metadata={"new_device": True},
+        ),
+        SecurityEvent(
             event_id="T7-FILE",
             timestamp=datetime(2026, 1, 1, 10, 5, tzinfo=timezone.utc),
             event_type="file_access",
