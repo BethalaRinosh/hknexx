@@ -182,6 +182,10 @@ python -m backend.adversarial
 
 The benchmark is synthetic and deterministic. It is a regression gate, not a production-world accuracy claim.
 
+### Release-integrity hardening
+
+Incident identifiers are deterministic and chain-specific. They are derived from the correlated campaign's evidence event IDs, so concurrent validated campaigns cannot overwrite or ambiguously reference one another through a shared user/device identifier. A regression test covers multiple simultaneous validated campaigns.
+
 ### Confidence drift and final robustness
 
 The regression suite now checks confidence separation between complete attacks and partial hypotheses, duplicate-telemetry deduplication, reversed-input invariance and large benign haystacks. The corresponding methodology is documented in `docs/PHASE12_CONFIDENCE_DRIFT.md` and `docs/PHASE14_FINAL_ROBUSTNESS.md`.

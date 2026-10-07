@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+import hashlib
 from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
@@ -601,4 +602,9 @@ def key_for_incident(chain: list[SecurityEvent]) -> str:
     user = next((e.user for e in chain if e.user), None)
     device = next((e.device for e in chain if e.device), None)
     base = (user or device or "unknown").upper().replace(" ", "_")
-    return f"{base}-001"
+    # Incident IDs must remain deterministic while distinguishing concurrent
+    # campaigns belonging to the same user/device. A user-only suffix can
+    # collide when multiple independent chains are validated in one analysis.
+    event_key = "|".join(sorted(e.event_id for e in chain))
+    digest = hashlib.sha256(event_key.encode("utf-8")).hexdigest()[:10]
+    return f"{base}-{digest}"
